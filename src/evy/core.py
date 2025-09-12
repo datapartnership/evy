@@ -1,4 +1,5 @@
 import logging
+from typing import Callable, Sequence
 
 import geopandas as gpd
 import pandas as pd
@@ -203,7 +204,7 @@ def compute_difference(
 def zonal_stats(
     data: xr.DataArray,
     geometries: gpd.GeoDataFrame,
-    stats_funcs: str | list[str] | dict = "mean",
+    stats_funcs: str | Sequence[str | Callable | tuple] = "mean",
     temporal_agg: str | None = None,
 ) -> gpd.GeoDataFrame:
     """
@@ -218,23 +219,20 @@ def zonal_stats(
     Returns:
         GeoDataFrame with zonal statistics
     """
-    SUPPORTED_STATS = ["mean", "max", "min", "sum", "std", "var", "count"]
+    SUPPORTED_STATS = ["mean", "median", "max", "min", "sum", "std", "var", "count"]
 
     if isinstance(stats_funcs, str):
         stats_funcs = [stats_funcs]
 
     if isinstance(stats_funcs, list):
-        unsupported = [stat for stat in stats_funcs if stat not in SUPPORTED_STATS]
-        if unsupported:
-            logger.warning(
-                f"Unsupported stats functions: {unsupported}. "
-                f"Supported functions: {SUPPORTED_STATS}"
-            )
+        stats_funcs = [stat for stat in stats_funcs if stat in SUPPORTED_STATS]
+        if not stats_funcs:
+            logger.warning("No valid stats functions remaining, using 'mean'")
+            stats_funcs = ["mean"]
 
-            stats_funcs = [stat for stat in stats_funcs if stat in SUPPORTED_STATS]
-            if not stats_funcs:
-                logger.warning("No valid stats functions remaining, using 'mean'")
-                stats_funcs = ["mean"]
+    if "median" in stats_funcs:
+        stats_funcs = [func for func in stats_funcs if func != "median"]
+        stats_funcs.append(("quantile", "quantile", dict(q=0.5)))
 
     if temporal_agg is not None:
         data = data.pipe(aggregate_by, dim="time", freq=temporal_agg)
@@ -263,7 +261,7 @@ def zonal_stats(
 def compute_phenology(
     data: xr.DataArray,
     geometries: gpd.GeoDataFrame,
-    stats_funcs: str | list[str] = "mean",
+    stats_funcs: str | Sequence[str | Callable | tuple] = "mean",
     aggregate_years: bool = False,
 ) -> pd.DataFrame:
     """
