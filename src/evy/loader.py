@@ -133,3 +133,68 @@ def open_evi(
     ds = ds.rename_vars({"250m_16_days_EVI": "evi"})
 
     return ds["evi"]
+
+
+def load_land_cover(
+    collection: str = "io-lulc-annual-v02",
+    bbox: tuple | None = None,
+    date_range: tuple | None = None,
+) -> xr.DataArray:
+    """
+    Load land use/land cover classification data.
+
+    Args:
+        collections: STAC collection IDs to search
+        bbox: Bounding box as (lon_min, lat_min, lon_max, lat_max)
+        date_range: Date range as (start_date, end_date)
+        add_class_names: Whether to add class names as attributes (loaded from collection metadata)
+
+    Returns:
+        Land use/land cover classification data as an xarray DataArray.
+        If add_class_names=True, class names will be available in .attrs['class_names']
+
+    Notes:
+        Class names are dynamically loaded from the STAC collection metadata.
+        For io-lulc-annual-v02 collection, this typically includes classes like:
+        Water, Trees, Crops, Built area, Bare ground, etc.
+    """
+    if date_range is None:
+        date_range = ("2024-01-01", "2024-01-01")
+
+    start_date, end_date = date_range
+    time_range = f"{start_date}/{end_date}"
+
+    catalog = pystac_client.Client.open(
+        "https://planetarycomputer.microsoft.com/api/stac/v1",
+        modifier=planetary_computer.sign_inplace,
+    )
+
+    search_kwargs = {"collections": [collection], "datetime": time_range}
+
+    if bbox is not None:
+        search_kwargs["bbox"] = bbox
+
+    search = catalog.search(**search_kwargs)
+    items = search.item_collection()
+
+    ds = (
+        stackstac.stack(items, epsg=4326, bounds_latlon=bbox)
+        .assign_coords(
+            time=pd.to_datetime([item.properties["start_datetime"] for item in items])
+            .tz_convert(None)
+            .to_numpy()
+        )
+        .sortby("time")
+        # Get the most recent observation only
+        .pipe(stackstac.mosaic)
+        # And drop the band dimension since there's only one band
+        .squeeze()
+    )
+
+    land_collection = catalog.get_collection(collection)
+    x = land_collection.item_assets["data"]
+    class_names = {x["summary"]: x["values"][0] for x in x.properties["file:values"]}
+    # values_to_classes = {v: k for k, v in class_names.items()}
+    ds.attrs["class_names"] = class_names
+
+    return ds

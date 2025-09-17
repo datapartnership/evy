@@ -1,6 +1,7 @@
 import logging
 
 import xarray as xr
+from rasterio.enums import Resampling
 
 logger = logging.getLogger(__name__)
 xr.set_options(keep_attrs=True)
@@ -33,3 +34,26 @@ def mask_evi_by_quality(ds: xr.Dataset, confidence_threshold: int = 0) -> xr.Dat
     ds = ds.copy()
     ds["250m_16_days_EVI"] = evi_masked
     return ds
+
+
+def mask_evi_by_cropland(evi: xr.DataArray, land_cover: xr.DataArray) -> xr.DataArray:
+    """
+    Mask EVI data to include only cropland areas based on land cover classification.
+
+    Args:
+        evi: xarray DataArray containing EVI data
+        land_cover: xarray DataArray with land cover classification
+
+    Returns:
+        xarray Dataset with masked EVI data
+    """
+    crop_classes = [v for k, v in land_cover.class_names.items() if "crop" in k.lower()]
+
+    # Upsample land cover from 10m to match EVI resolution (250m)
+    land_cover = land_cover.rio.reproject_match(
+        evi,
+        resampling=Resampling.mode,
+    )
+
+    crop_mask = land_cover.isin(crop_classes)
+    return evi.where(crop_mask)
