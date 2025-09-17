@@ -239,7 +239,7 @@ def zonal_stats(
 
     if data.rio.crs is None:
         logger.warning("Data missing CRS information, setting default CRS (EPSG:4326)")
-        data = data.rio.write_crs("EPSG:4326")
+        data = data.rio.write_crs("EPSG:3857")
 
     if "zone_id" not in geometries.columns:
         geometries = geometries.reset_index().rename(columns={"index": "zone_id"})

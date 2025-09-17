@@ -48,7 +48,7 @@ def fetch_boundaries(
     response.raise_for_status()
     download_url = response.json()["gjDownloadURL"]
     logger.debug(f"Downloading GeoJSON from: {download_url}")
-    gdf = gpd.read_file(download_url)
+    gdf = gpd.read_file(download_url).to_crs(epsg=3857)
     gdf.to_file(cache_file, driver="GeoJSON")
     return gdf
 
@@ -110,7 +110,7 @@ def open_evi(
     items = search.item_collection()
 
     stacked = (
-        stackstac.stack(items, epsg=4326, bounds_latlon=bbox, assets=assets)
+        stackstac.stack(items, epsg=3857, bounds_latlon=bbox, assets=assets)
         .assign_coords(
             {
                 "time": lambda ds: pd.to_datetime(
@@ -178,7 +178,7 @@ def load_land_cover(
     items = search.item_collection()
 
     ds = (
-        stackstac.stack(items, epsg=4326, bounds_latlon=bbox)
+        stackstac.stack(items, epsg=3857, resolution=250, bounds_latlon=bbox)
         .assign_coords(
             time=pd.to_datetime([item.properties["start_datetime"] for item in items])
             .tz_convert(None)
