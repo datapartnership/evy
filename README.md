@@ -6,6 +6,8 @@
 
 **evy** is a Python package for fetching, processing, and analyzing Enhanced Vegetation Index (EVI) data from MODIS satellite imagery. It provides a high-level interface to work with vegetation data, enabling researchers and practitioners to monitor vegetation health, compute phenological metrics, detect anomalies, and perform zonal statistics with ease.
 
+> **Note:** This package is a work in progress. Features and APIs may change as development continues.
+
 ## Features
 
 - **Easy Data Access**: Fetch MODIS EVI data from Planetary Computer with automatic quality masking
@@ -34,6 +36,10 @@ pip install git+https://github.com/datapartnership/evy.git
 
 For detailed examples, see the [notebooks/](notebooks/) directory:
 - [quickstart.ipynb](notebooks/quickstart.ipynb): Comprehensive walkthrough of main features
+
+## Citation
+
+If you use this package in your research or work, please cite it using the information in [CITATION.cff](CITATION.cff).
 
 ## License
 
