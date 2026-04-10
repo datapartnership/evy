@@ -43,10 +43,8 @@ sphinx:
     - autodoc2
   config:
     autodoc2_packages:
-      - path: ../src/evy
+      - path: src/evy
         auto_mode: false
     autodoc2_render_plugin: myst
-    autodoc2_hidden_regexes:
-      - ".*\\._.*"
     html_show_copyright: false
     html_last_updated_fmt: "%b %d, %Y"

@@ -7,8 +7,11 @@ parts:
       - file: docs/installation
       - file: notebooks/quickstart
 
-  - caption: Cookbook
-    chapters: []
+  # Cookbook section is empty until Phase 3 — commented out because Jupyter Book
+  # rejects empty chapters lists. Uncomment and add recipe notebooks in Phase 3.
+  # - caption: Cookbook
+  #   chapters:
+  #     - file: notebooks/recipes/...
 
   - caption: Reference
     chapters:

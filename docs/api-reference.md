@@ -6,75 +6,75 @@ Symbols beginning with `_` are internal and not part of the public contract. The
 
 ## Boundaries
 
-```{autodoc2-object} evy.get_boundaries
+```{autodoc2-object} evy.boundaries.get_boundaries
 ```
 
-```{autodoc2-object} evy.load_boundaries
+```{autodoc2-object} evy.boundaries.load_boundaries
 ```
 
-```{autodoc2-object} evy.clear_cache
+```{autodoc2-object} evy.boundaries.clear_cache
 ```
 
 ## Collections & Authentication
 
-```{autodoc2-object} evy.list_collections
+```{autodoc2-object} evy.collections.list_collections
 ```
 
-```{autodoc2-object} evy.authenticate
+```{autodoc2-object} evy._auth.authenticate
 ```
 
-```{autodoc2-object} evy.is_authenticated
+```{autodoc2-object} evy._auth.is_authenticated
 ```
 
-```{autodoc2-object} evy.check_task_status
+```{autodoc2-object} evy._convert.check_task_status
 ```
 
 ## Zonal Statistics
 
-```{autodoc2-object} evy.zonal_stats
+```{autodoc2-object} evy.zonal.zonal_stats
 ```
 
-```{autodoc2-object} evy.load_modis
+```{autodoc2-object} evy.load.load_modis
 ```
 
-```{autodoc2-object} evy.load_landcover
+```{autodoc2-object} evy.load.load_landcover
 ```
 
-```{autodoc2-object} evy.compute_zonal_stats
+```{autodoc2-object} evy._zonal_local.compute_zonal_stats
 ```
 
 ## Phenology
 
-```{autodoc2-object} evy.calculate_phenology
+```{autodoc2-object} evy.phenology.calculate_phenology
 ```
 
-```{autodoc2-object} evy.extract_phenology
+```{autodoc2-object} evy.phenology.extract_phenology
 ```
 
-```{autodoc2-object} evy.preprocess_series
+```{autodoc2-object} evy.phenology.preprocess_series
 ```
 
-```{autodoc2-object} evy.get_growing_season
+```{autodoc2-object} evy.phenology.get_growing_season
 ```
 
-```{autodoc2-object} evy.filter_growing_season
+```{autodoc2-object} evy.phenology.filter_growing_season
 ```
 
 ## Visualization
 
-```{autodoc2-object} evy.plot_seasonality
+```{autodoc2-object} evy.viz.plot_seasonality
 ```
 
-```{autodoc2-object} evy.plot_seasonality_by_region
+```{autodoc2-object} evy.viz.plot_seasonality_by_region
 ```
 
-```{autodoc2-object} evy.plot_time_series
+```{autodoc2-object} evy.viz.plot_time_series
 ```
 
-```{autodoc2-object} evy.plot_time_series_by_region
+```{autodoc2-object} evy.viz.plot_time_series_by_region
 ```
 
-```{autodoc2-object} evy.plot_choropleth
+```{autodoc2-object} evy.viz.plot_choropleth
 ```
 
 ## Constants
