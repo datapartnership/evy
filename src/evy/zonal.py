@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta
 from functools import reduce
 import logging
-from pathlib import Path
 from typing import Literal
 
 import ee
@@ -12,11 +11,7 @@ import pandas as pd
 
 from evy._auth import _ensure_initialized
 from evy._convert import fc_to_dataframe
-from evy.boundaries import (
-    _gdf_to_ee_feature_collection,
-    get_boundaries,
-    load_boundaries,
-)
+from evy.boundaries import _gdf_to_ee_feature_collection
 from evy.collections import (
     _load_modis_collection,
     _load_sentinel2_collection,
@@ -27,31 +22,36 @@ logger = logging.getLogger(__name__)
 
 
 def zonal_stats(
-    boundaries: str | gpd.GeoDataFrame | Path,
+    boundaries: gpd.GeoDataFrame,
     *,
+    zone_col: str,
+    backend: Literal["gee", "local"] = "gee",
     source: Literal["modis", "sentinel2"] = "modis",
     start_date: str | None = None,
     end_date: str | None = None,
     freq: str = "ME",
     stats: str | list[str] = "mean",
-    admin_level: int = 1,
     include_geometry: bool = False,
     mask_cropland: bool = True,
-    scale: int | None = None,
-    export_to_drive: bool = False,
-    drive_folder: str = "evy_exports",
-    project: str | None = None,
+    **kwargs,
 ) -> pd.DataFrame | gpd.GeoDataFrame | str:
     """
-    Compute zonal statistics for EVI using Google Earth Engine.
+    Compute EVI zonal statistics over administrative boundaries.
 
     Parameters
     ----------
     boundaries:
-        Zone boundaries for aggregation. Can be:
-        - ISO3 country code (e.g., 'SYR', 'KEN') - fetches from GeoBoundaries
-        - GeoDataFrame with polygon geometries
-        - Path to shapefile or GeoJSON file
+        Zone boundaries for aggregation as a :class:`~geopandas.GeoDataFrame`.
+        Use :func:`evy.get_boundaries` to fetch from GeoBoundaries, or
+        :func:`evy.load_boundaries` to read a local file.
+    zone_col:
+        Name of the column in ``boundaries`` that identifies each zone. This
+        column is passed through to the output unchanged. For GeoBoundaries
+        data the conventional value is ``"shapeName"``.
+    backend:
+        Computation backend:
+        - 'gee': Google Earth Engine (server-side, requires authentication)
+        - 'local': Local computation via Planetary Computer STAC (no auth needed)
     source:
         Satellite data source:
         - 'modis': MODIS Terra + Aqua (250m, 16-day, from 2000)
@@ -77,49 +77,51 @@ def zonal_stats(
         - 'std': Standard deviation
         - 'sum': Sum of values
         - 'count': Pixel count
-    admin_level:
-        Administrative level when boundaries is ISO3 code:
-        - 0: Country
-        - 1: Province/State (default)
-        - 2: District/County
-        - 3-5: Lower levels (availability varies)
     include_geometry:
         If True, return GeoDataFrame with geometry column.
-        If False, return pandas DataFrame (smaller, faster).
+        If False, return pandas DataFrame.
     mask_cropland:
         If False, do not mask non-cropland areas using Dynamic World
         land cover classification.
-    scale:
-        Resolution in meters. Default depends on source:
-        - MODIS: 250m (native resolution)
-        - Sentinel-2: 10m (native resolution)
-    export_to_drive:
-        If True, export results to Google Drive instead of returning directly.
-        Useful for large queries that might timeout.
-    drive_folder:
-        Google Drive folder name for exports.
-    project:
-        Google Earth Engine project ID.
-        If None, uses default or environment variable GEE_PROJECT.
+    **kwargs:
+        Additional keyword arguments. The following are GEE-only and only
+        supported with ``backend='gee'``:
+
+        scale : int or None
+            Resolution in meters. Default depends on source:
+            - MODIS: 250m (native resolution)
+            - Sentinel-2: 10m (native resolution)
+        export_to_drive : bool
+            If True, export results to Google Drive instead of returning directly.
+            Useful for large queries that might timeout.
+        drive_folder : str
+            Google Drive folder name for exports. Default: 'evy_exports'.
+        project : str or None
+            Google Earth Engine project ID.
+            If None, uses default or environment variable GEE_PROJECT.
 
     Returns
     -------
     pd.DataFrame or gpd.GeoDataFrame or str
         If export_to_drive=False: Zonal statistics with columns:
         - 'date': Date of observation
-        - 'zone_name': Zone name (if available)
+        - ``zone_col``: Zone identifier (the user's original column name)
         - 'evi_mean', 'evi_std', etc.: Computed statistics
         - 'geometry': (only if include_geometry=True)
 
         If export_to_drive=True: Task ID string for the export task
     """
-    _ensure_initialized(project)
-
-    if source not in ("modis", "sentinel2"):
-        raise ValueError(f"Unknown source: {source}. Available: 'modis', 'sentinel2'")
-
-    if scale is None:
-        scale = 250 if source == "modis" else 10
+    if not isinstance(boundaries, gpd.GeoDataFrame):
+        raise TypeError(
+            "boundaries must be a GeoDataFrame. "
+            "Use evy.get_boundaries('ISO3') to fetch from GeoBoundaries, "
+            "or evy.load_boundaries('path.shp') to read a local file."
+        )
+    if zone_col not in boundaries.columns:
+        raise ValueError(
+            f"zone_col='{zone_col}' not found in boundaries. "
+            f"Available columns: {list(boundaries.columns)}"
+        )
 
     end_date = datetime.now().strftime("%Y-%m-%d") if end_date is None else end_date
     start_date = (
@@ -128,13 +130,51 @@ def zonal_stats(
         else start_date
     )
 
+    if backend == "local":
+        gee_only = {"scale", "export_to_drive", "drive_folder", "project"}
+        invalid = set(kwargs) & gee_only
+        if invalid:
+            raise ValueError(
+                f"Parameters {invalid} are only supported with backend='gee'"
+            )
+
+        if source == "sentinel2":
+            raise ValueError(
+                "Local backend currently only supports MODIS. Use source='modis' or backend='gee'.",
+            )
+
+        from evy._zonal_local import _zonal_stats_local
+
+        return _zonal_stats_local(
+            boundaries=boundaries,
+            zone_col=zone_col,
+            start_date=start_date,
+            end_date=end_date,
+            freq=freq,
+            stats=stats,
+            include_geometry=include_geometry,
+            mask_cropland=mask_cropland,
+        )
+
+    scale = kwargs.get("scale", None)
+    export_to_drive = kwargs.get("export_to_drive", False)
+    drive_folder = kwargs.get("drive_folder", "evy_exports")
+    project = kwargs.get("project", None)
+
+    _ensure_initialized(project)
+
+    if source not in ("modis", "sentinel2"):
+        raise ValueError(f"Unknown source: {source}. Available: 'modis', 'sentinel2'")
+
+    if scale is None:
+        scale = 250 if source == "modis" else 10
+
     logger.info(
         f"Computing zonal stats for EVI from {source.upper()} "
         f"({start_date} to {end_date})"
     )
 
-    gdf = _resolve_boundaries(boundaries, admin_level)
-    features = _gdf_to_ee_feature_collection(gdf)
+    features = _gdf_to_ee_feature_collection(boundaries)
     region = features.geometry()
 
     ic = (
@@ -154,7 +194,7 @@ def zonal_stats(
     fc = _compute_zonal_stats(ic, features, reducer, scale)
 
     if export_to_drive:
-        filename = _generate_export_filename(boundaries, source, start_date, end_date)
+        filename = _generate_export_filename(source, start_date, end_date)
         from evy._convert import export_to_drive as _export
 
         return _export(fc, filename, drive_folder)
@@ -162,31 +202,8 @@ def zonal_stats(
         # Fetch without geometry and join in client-side if needed
         df = fc_to_dataframe(fc, include_geometry=False)
         if include_geometry:
-            return _join_geometries(df, gdf)
+            return _join_geometries(df, boundaries)
         return df
-
-
-def _resolve_boundaries(
-    boundaries: str | gpd.GeoDataFrame | Path,
-    admin_level: int,
-) -> gpd.GeoDataFrame:
-    """Resolve boundaries parameter to GeoDataFrame."""
-    if isinstance(boundaries, gpd.GeoDataFrame):
-        return boundaries
-    elif isinstance(boundaries, Path) or (
-        isinstance(boundaries, str)
-        and ("/" in boundaries or "\\" in boundaries or "." in boundaries)
-    ):
-        # File path
-        return load_boundaries(boundaries)
-    elif isinstance(boundaries, str) and len(boundaries) == 3:
-        # ISO3 code
-        return get_boundaries(boundaries, admin_level)
-    else:
-        raise ValueError(
-            f"Invalid boundaries: {boundaries}. "
-            "Expected ISO3 code (e.g., 'SYR'), GeoDataFrame, or file path."
-        )
 
 
 def _join_geometries(df: pd.DataFrame, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -368,16 +385,9 @@ def _aggregate_yearly(ic, start, end):
     return ee.ImageCollection.fromImages(years.map(yearly_composite))
 
 
-def _generate_export_filename(
-    boundaries, source: str, start_date: str, end_date: str
-) -> str:
+def _generate_export_filename(source: str, start_date: str, end_date: str) -> str:
     """Generate a descriptive filename for exports."""
-    if isinstance(boundaries, str) and len(boundaries) == 3:
-        region = boundaries.lower()
-    else:
-        region = "custom"
-
     start_short = start_date.replace("-", "")[:6]
     end_short = end_date.replace("-", "")[:6]
 
-    return f"{region}_evi_{source}_zonal_stats_{start_short}_{end_short}"
+    return f"evi_{source}_zonal_stats_{start_short}_{end_short}"

@@ -113,10 +113,7 @@ def get_boundaries(
     return gdf
 
 
-def load_boundaries(
-    path: Union[str, Path],
-    name_column: str | None = None,
-) -> gpd.GeoDataFrame:
+def load_boundaries(path: Union[str, Path]) -> gpd.GeoDataFrame:
     """
     Load boundaries from a local file (shapefile, GeoJSON, GeoPackage).
 
@@ -128,14 +125,13 @@ def load_boundaries(
         - GeoJSON (.geojson, .json)
         - GeoPackage (.gpkg)
         - Any format supported by geopandas
-    name_column:
-        Column to use as zone name. If None, attempts to detect
-        from common naming conventions (NAME, name, NAME_EN, etc.)
 
     Returns
     -------
     gpd.GeoDataFrame
-        Boundaries reprojected to EPSG:4326
+        Boundaries reprojected to EPSG:4326. Columns are returned as-is from
+        the source file; callers pass the desired identifier column to
+        :func:`evy.zonal_stats` via its ``zone_col`` parameter.
 
     Raises
     ------
@@ -155,15 +151,6 @@ def load_boundaries(
         raise ValueError(f"Failed to read boundary file: {e}") from e
 
     gdf = _ensure_crs(gdf)
-
-    # Try to identify name column if not specified
-    if name_column is None:
-        name_column = _detect_name_column(gdf)
-
-    # Standardize column name if found
-    if name_column and name_column in gdf.columns:
-        if name_column != "zone_name":
-            gdf = gdf.rename(columns={name_column: "zone_name"})
 
     logger.info(f"Loaded {len(gdf)} boundaries from {path}")
     return gdf
@@ -212,38 +199,6 @@ def _ensure_crs(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         logger.info(f"Reprojecting from {gdf.crs} to {CRS}")
         return gdf.to_crs(CRS)
     return gdf
-
-
-def _detect_name_column(gdf: gpd.GeoDataFrame) -> str | None:
-    """Attempt to detect the name column from common naming conventions."""
-    common_names = [
-        "shapeName",
-        "NAME",
-        "name",
-        "NAME_EN",
-        "name_en",
-        "ADM1_EN",
-        "ADM2_EN",
-        "admin_name",
-        "ADMIN_NAME",
-        "region",
-        "district",
-        "province",
-    ]
-
-    for col in common_names:
-        if col in gdf.columns:
-            logger.debug(f"Detected name column: {col}")
-            return col
-
-    # Check for any column containing 'name'
-    for col in gdf.columns:
-        if "name" in col.lower():
-            logger.debug(f"Detected name column (fuzzy): {col}")
-            return col
-
-    logger.warning("Could not detect name column")
-    return None
 
 
 def _gdf_to_ee_feature_collection(gdf: gpd.GeoDataFrame):

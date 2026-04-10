@@ -88,7 +88,8 @@ def plot_seasonality(
     Examples
     --------
     >>> import evy
-    >>> df = evy.zonal_stats('SYR', freq='D')
+    >>> gdf = evy.get_boundaries('SYR', admin_level=1)
+    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='D')
     >>> phenology = evy.calculate_phenology(df)
     >>> chart = evy.plot_seasonality(phenology)
     >>> chart.display()  # or chart.save('seasonality.html')
@@ -152,7 +153,7 @@ def plot_seasonality(
 
 def plot_seasonality_by_region(
     df: pd.DataFrame,
-    region_col: str = "zone_name",
+    region_col: str = "shapeName",
     value_col: str = "value",
     smoothed_col: str = "smoothed",
     month_col: str = "month",
@@ -171,7 +172,7 @@ def plot_seasonality_by_region(
     ----------
     df : pd.DataFrame
         DataFrame from calculate_phenology() with group_col specified
-    region_col : str, default 'zone_name'
+    region_col : str, default 'shapeName'
         Column with region names for faceting
     value_col : str, default 'value'
         Column with raw/mean values
@@ -202,8 +203,9 @@ def plot_seasonality_by_region(
     Examples
     --------
     >>> import evy
-    >>> df = evy.zonal_stats('SYR', freq='D')
-    >>> phenology = evy.calculate_phenology(df, group_col='zone_name')
+    >>> gdf = evy.get_boundaries('SYR', admin_level=1)
+    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='D')
+    >>> phenology = evy.calculate_phenology(df, group_col='shapeName')
     >>> chart = evy.plot_seasonality_by_region(phenology)
     >>> chart.display()
     """
@@ -339,7 +341,8 @@ def plot_time_series(
     Examples
     --------
     >>> import evy
-    >>> df = evy.zonal_stats('SYR', freq='ME')
+    >>> gdf = evy.get_boundaries('SYR', admin_level=1)
+    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='ME')
     >>> chart = evy.plot_time_series(df)
     >>> chart.display()
     """
@@ -386,7 +389,7 @@ def plot_time_series(
 
 def plot_time_series_by_region(
     df: pd.DataFrame,
-    region_col: str = "zone_name",
+    region_col: str = "shapeName",
     value_col: str = "mean",
     date_col: str = "date",
     columns: int = 4,
@@ -401,7 +404,7 @@ def plot_time_series_by_region(
     ----------
     df : pd.DataFrame
         DataFrame with time series data
-    region_col : str, default 'zone_name'
+    region_col : str, default 'shapeName'
         Column with region names for faceting
     value_col : str, default 'mean'
         Column with values to plot
@@ -424,7 +427,8 @@ def plot_time_series_by_region(
     Examples
     --------
     >>> import evy
-    >>> df = evy.zonal_stats('SYR', freq='YE')
+    >>> gdf = evy.get_boundaries('SYR', admin_level=1)
+    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='YE')
     >>> chart = evy.plot_time_series_by_region(df)
     >>> chart.display()
     """
@@ -476,7 +480,7 @@ def plot_choropleth(
     df: pd.DataFrame,
     geodata: gpd.GeoDataFrame,
     value_col: str = "mean",
-    region_col: str = "zone_name",
+    region_col: str = "shapeName",
     geo_key: str = "PCODE",
     df_key: str = "PCODE",
     title: str = "EVI by Region",
@@ -495,7 +499,7 @@ def plot_choropleth(
         GeoDataFrame with region geometries
     value_col : str, default 'mean'
         Column with values for coloring
-    region_col : str, default 'zone_name'
+    region_col : str, default 'shapeName'
         Column with region names for tooltip
     geo_key : str, default 'PCODE'
         Column in geodata to join on
@@ -518,9 +522,11 @@ def plot_choropleth(
     Examples
     --------
     >>> import evy
-    >>> df = evy.zonal_stats('SYR', freq='YE', include_geometry=True)
-    >>> geodata = evy.get_boundaries('SYR', admin_level=1)
-    >>> chart = evy.plot_choropleth(df, geodata)
+    >>> gdf = evy.get_boundaries('SYR', admin_level=1)
+    >>> df = evy.zonal_stats(
+    ...     gdf, zone_col='shapeName', freq='YE', include_geometry=True
+    ... )
+    >>> chart = evy.plot_choropleth(df, gdf)
     >>> chart.display()
     """
     _check_altair()

@@ -3,10 +3,11 @@
 from evy.zonal import zonal_stats
 from evy.boundaries import clear_cache, get_boundaries, load_boundaries
 
-# Collections and authentication
 from evy.collections import list_collections
 from evy._auth import authenticate, is_authenticated
 from evy._convert import check_task_status
+from evy.load import load_modis, load_landcover
+from evy._zonal_local import compute_zonal_stats
 
 from evy.phenology import (
     calculate_phenology,
@@ -24,7 +25,7 @@ from evy.viz import (
     plot_time_series_by_region,
 )
 
-# Constants
+
 DAILY = "D"
 WEEKLY = "W"
 MONTHLY = "ME"
@@ -36,6 +37,9 @@ CRS = "EPSG:4326"
 __all__ = [
     # Main function
     "zonal_stats",
+    "load_modis",
+    "load_landcover",
+    "compute_zonal_stats",
     # Boundary functions
     "get_boundaries",
     "load_boundaries",
