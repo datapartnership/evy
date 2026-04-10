@@ -166,7 +166,7 @@ def calculate_phenology(
     date_col:
         Column name containing dates
     group_col:
-        Column name to group by (e.g., 'zone_name' for regional analysis).
+        Column name to group by (e.g., 'shapeName' for regional analysis).
         If None, calculates phenology for entire dataset.
     threshold:
         Amplitude threshold for SOS/EOS detection
