@@ -25,26 +25,46 @@ def preprocess_series(
     """
     TIMESAT-style preprocessing for vegetation index time series.
 
-    Applies the following steps:
-    1. Remove outliers using median filter (values > std * multiplier from rolling median)
-    2. Interpolate missing values linearly
-    3. Smooth using Savitzky-Golay filter
+    Applies three sequential steps in the TIMESAT tradition:
+
+    1. Outlier removal — values that deviate from the rolling median by
+       more than ``outlier_std_multiplier`` times the series standard
+       deviation are masked and then interpolated.
+    2. Linear interpolation to fill remaining gaps in both directions.
+    3. Savitzky-Golay smoothing of the filled series.
+
+    The implementation is a lightweight Python port of the preprocessing
+    stage of the original TIMESAT software (Jönsson & Eklundh 2004), not
+    a bit-exact reproduction.
 
     Parameters
     ----------
-    series:
-        Time series of vegetation index values
-    window_length:
-        Window length for Savitzky-Golay filter (must be odd)
-    polyorder:
-        Polynomial order for Savitzky-Golay filter
-    outlier_std_multiplier:
-        Multiplier for standard deviation to identify outliers
+    series : pd.Series
+        Time series of vegetation index values. Missing values (NaN) are
+        allowed and will be interpolated.
+    window_length : int, default 5
+        Window length for the Savitzky-Golay filter. Must be odd; if an
+        even value is passed, it is decremented internally to the next odd
+        number. Clamped to at least 3.
+    polyorder : int, default 2
+        Polynomial order for the Savitzky-Golay filter. Must be less than
+        ``window_length``.
+    outlier_std_multiplier : float, default 2.0
+        Threshold (in standard deviations) above which a value is treated
+        as an outlier and masked.
 
     Returns
     -------
     np.ndarray
-        Smoothed time series values
+        Smoothed values as a float array, same length as the input series.
+
+    Raises
+    ------
+    ImportError
+        If ``scipy`` is not installed. ``scipy`` is a core dependency of
+        evy, so this error should not arise in normal installations, but
+        the check is retained for users who have installed evy into an
+        environment with stripped dependencies.
     """
     if not HAS_SCIPY:
         raise ImportError(
