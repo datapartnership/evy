@@ -14,22 +14,48 @@ logger = logging.getLogger(__name__)
 
 def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
     """
-    Load MODIS EVI and quality bands from STAC items.
+    Load MODIS EVI and quality bands from a STAC catalog.
+
+    Searches the Microsoft Planetary Computer STAC endpoint for MOD13Q1
+    (MODIS Terra 16-day, 250m) items intersecting the boundary bounding
+    box and opens them lazily via ``odc-stac``. The returned Dataset is
+    Dask-backed; no pixels are materialized until you call ``.compute()``
+    or reduce over the data.
 
     Parameters
     ----------
     boundaries : gpd.GeoDataFrame
-        GeoDataFrame containing zone boundaries, used to determine
-        the bounding box for the STAC search.
+        Zone boundaries used to derive the STAC search bounding box. Any
+        CRS is accepted; only the total bounds are used.
     start_date : str
-        Start date in ISO format (YYYY-MM-DD).
+        Inclusive start date as an ISO string (YYYY-MM-DD).
     end_date : str
-        End date in ISO format (YYYY-MM-DD).
+        Inclusive end date as an ISO string (YYYY-MM-DD).
 
     Returns
     -------
     xr.Dataset
-        Lazy Dataset with 'evi_raw' and 'qa' variables.
+        Lazy Dataset with two variables:
+
+        - ``evi_raw`` : int16 EVI values (scaled ×10000 per MODIS convention)
+        - ``qa`` : pixel reliability (0=good, 1=marginal, 2=snow/ice, 3=cloudy)
+
+        Both are indexed by ``(time, y, x)`` with chunks of ``{x: 2048,
+        y: 2048, time: 1}``.
+
+    Raises
+    ------
+    RuntimeError
+        If the STAC catalog is unreachable or returns no items for the
+        requested bbox and date range.
+
+    Examples
+    --------
+    >>> import evy
+    >>> gdf = evy.get_boundaries('KEN', admin_level=1)
+    >>> ds = evy.load_modis(gdf, '2023-01-01', '2023-12-31')
+    >>> ds.evi_raw.sizes
+    {'time': 23, 'y': ..., 'x': ...}
     """
 
     catalog = pystac_client.Client.open(
@@ -68,20 +94,36 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
 
 def load_landcover(boundaries: gpd.GeoDataFrame, ds_evi: xr.Dataset):
     """
-    Load MODIS land cover band from STAC items. The package currently only supports loading land cover for a single period,
-    so the start and end dates are fixed to a single time.
+    Load an ESA WorldCover land cover raster aligned to an EVI dataset.
+
+    Searches the Microsoft Planetary Computer STAC endpoint for the
+    ``esa-worldcover`` collection over the boundary bounding box and
+    reprojects the result to match the grid of ``ds_evi`` using nearest-
+    neighbor (mode) resampling. Only a single timestep is loaded, because
+    WorldCover is a static (annual) product.
 
     Parameters
     ----------
     boundaries : gpd.GeoDataFrame
-        GeoDataFrame containing the zone boundaries, used to determine the bounding box for loading land cover data.
+        Zone boundaries used to derive the STAC search bounding box.
     ds_evi : xr.Dataset
-        Dataset containing the EVI data, used to align the land cover data.
+        An EVI Dataset (typically from :func:`load_modis`) whose grid the
+        land cover layer should be aligned to.
 
     Returns
     -------
-    xr.Dataset
-        Lazy Dataset with 'land_cover' variable.
+    xr.DataArray
+        Eager (computed) DataArray of WorldCover class codes, indexed by
+        ``(y, x)``. Class code 40 is cropland; see the ESA WorldCover
+        documentation for the full legend.
+
+    Examples
+    --------
+    >>> import evy
+    >>> gdf = evy.get_boundaries('KEN', admin_level=1)
+    >>> ds = evy.load_modis(gdf, '2023-01-01', '2023-12-31')
+    >>> lc = evy.load_landcover(gdf, ds)
+    >>> cropland_mask = (lc == 40)
     """
     catalog = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1",
