@@ -7,11 +7,13 @@ parts:
       - file: docs/installation
       - file: notebooks/quickstart
 
-  # Cookbook section is empty until Phase 3 — commented out because Jupyter Book
-  # rejects empty chapters lists. Uncomment and add recipe notebooks in Phase 3.
-  # - caption: Cookbook
-  #   chapters:
-  #     - file: notebooks/recipes/...
+  - caption: Cookbook
+    chapters:
+      - file: notebooks/recipes/monthly-aggregation
+      - file: notebooks/recipes/cropland-masking
+      - file: notebooks/recipes/multi-country-comparison
+      - file: notebooks/recipes/phenology-extraction
+      - file: notebooks/recipes/local-backend
 
   - caption: Reference
     chapters:
