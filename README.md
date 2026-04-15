@@ -4,7 +4,7 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-**evy** is a Python package for fetching, processing, and analyzing Enhanced Vegetation Index (EVI) data from MODIS satellite imagery. It provides a high-level interface to work with vegetation data, enabling researchers and practitioners to monitor vegetation health, compute phenological metrics, detect anomalies, and perform zonal statistics with ease.
+**evy** is a Python package for fetching, processing, and analyzing Enhanced Vegetation Index (EVI) data from MODIS satellite imagery. It provides a high-level interface to work with vegetation data, enabling researchers and practitioners to monitor vegetation health, compute phenological metrics, and perform zonal statistics with ease.
 
 > **Note:** This package is a work in progress. Features and APIs may change as development continues.
 
@@ -14,7 +14,6 @@
 - **Zonal Statistics**: Compute statistics (mean, median, max, etc.) for specific geometries
 - **Temporal Aggregation**: Aggregate data at various temporal frequencies (monthly, yearly, quarterly)
 - **Phenology Analysis**: Extract and visualize vegetation growing seasons and phenological patterns
-- **Anomaly Detection**: Calculate vegetation anomalies using z-scores, differences, or percentages
 - **Land Cover Masking**: Filter EVI data by land cover classification (e.g., cropland-only analysis)
 - **Visualization**: Built-in plotting functions for time series and phenology
 
