@@ -2,6 +2,7 @@
 
 import logging
 
+import dask
 import geopandas as gpd
 import pandas as pd
 import xarray as xr
@@ -19,6 +20,15 @@ logger = logging.getLogger(__name__)
 
 # evy stat name -> exactextract stat name (only where they differ).
 _EXACTEXTRACT_STATS = {"std": "stdev"}
+# Memory for one block of time steps computed together. Larger blocks let
+# Dask download more files in parallel.
+# ponytail: fixed 1 GB budget; derive from available RAM if users hit limits.
+_BLOCK_BYTES = 1_000_000_000
+# Threads for computing blocks. The work is mostly waiting on downloads, but
+# too many requests trigger server throttling (Rwanda ADM2, 1 year: 8 threads
+# finished in 40 s; 32 threads had not finished after 4 min).
+# A num_workers value set by the user in the Dask config takes precedence.
+_IO_THREADS = 8
 
 
 def _normalize_output(
@@ -97,23 +107,31 @@ def _extract_zonal(
     boundaries = boundaries.to_crs(evi.rio.crs)
     ee_stats = [_EXACTEXTRACT_STATS.get(s, s) for s in stats]
 
+    # Compute time steps in memory before extraction. exactextract reads one
+    # window per zone, and on a lazy (Dask) array each read would repeat the
+    # downloads and the median, so cost would grow with zones x time steps.
+    # Steps are computed in blocks so their files download in parallel.
+    n_steps = evi.sizes["time"]
+    step_bytes = evi.nbytes // max(n_steps, 1)
+    block = max(1, _BLOCK_BYTES // max(step_bytes, 1))
+
+    threads = dask.config.get("num_workers", None) or _IO_THREADS
+
     all_results = []
-    for time_val in evi["time"].values:
-        date = pd.to_datetime(time_val).date()
-        # Compute the time step once. exactextract reads one window per zone,
-        # and on a lazy (Dask) array each read would repeat the downloads and
-        # the median; that made the cost grow with zones x time steps.
-        evi_slice = evi.sel(time=time_val).compute()
-        result = exact_extract(
-            evi_slice,
-            boundaries,
-            ee_stats,
-            include_cols=[zone_col],
-            include_geom=True,
-            output="pandas",
-        )
-        result["date"] = date
-        all_results.append(result)
+    for start in range(0, n_steps, block):
+        with dask.config.set(num_workers=threads):
+            evi_block = evi.isel(time=slice(start, start + block)).compute()
+        for time_val in evi_block["time"].values:
+            result = exact_extract(
+                evi_block.sel(time=time_val),
+                boundaries,
+                ee_stats,
+                include_cols=[zone_col],
+                include_geom=True,
+                output="pandas",
+            )
+            result["date"] = pd.to_datetime(time_val).date()
+            all_results.append(result)
 
     result = pd.concat(all_results, ignore_index=True)
     return gpd.GeoDataFrame(result, geometry="geometry", crs=evi.rio.crs)

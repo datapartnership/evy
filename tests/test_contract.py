@@ -99,3 +99,18 @@ def test_local_extracts_from_memory_not_lazy_dask(small_boundaries, monkeypatch)
     ds = _synthetic_modis([5000, 3000, 6000]).chunk({"time": 1})
     compute_zonal_stats(ds, small_boundaries, zone_col="shapeName")
     assert seen and all(chunks is None for chunks in seen)
+
+
+def test_local_block_size_does_not_change_results(small_boundaries, monkeypatch):
+    import evy._zonal_local as zl
+
+    ds = _synthetic_modis([5000, 3000, 6000]).chunk({"time": 1})
+    one_block = compute_zonal_stats(
+        ds, small_boundaries, zone_col="shapeName", freq="Original"
+    )
+    monkeypatch.setattr(zl, "_BLOCK_BYTES", 1)  # forces one time step per block
+    many_blocks = compute_zonal_stats(
+        ds, small_boundaries, zone_col="shapeName", freq="Original"
+    )
+    pd.testing.assert_frame_equal(one_block, many_blocks)
+    assert len(one_block) == 3 * len(small_boundaries)
