@@ -28,6 +28,8 @@ FREQS = ("Original", "ME", "QE", "YE")
 _GEE_STAT_NAMES = {"std": "stdDev"}
 # pandas period alias and length in months, for calendar-aligned GEE composites.
 _GEE_PERIODS = {"ME": ("M", 1), "QE": ("Q", 3), "YE": ("Y", 12)}
+_GEE_BATCH_MONTHS = 6
+_GEE_ZONE_BATCH_SIZE = 50
 
 
 def _default_dates(start_date: str | None, end_date: str | None) -> tuple[str, str]:
@@ -205,29 +207,22 @@ def zonal_stats(
         f"({start_date} to {end_date})"
     )
 
-    features = _gdf_to_ee_feature_collection(boundaries)
+    boundaries_with_id = boundaries.copy()
+    if "_evy_boundary_id" not in boundaries_with_id:
+        boundaries_with_id["_evy_boundary_id"] = range(len(boundaries_with_id))
+    features = _gdf_to_ee_feature_collection(boundaries_with_id)
     region = features.geometry()
 
     # GEE end dates are exclusive; add one day so end_date is included,
     # matching the local backend's inclusive STAC search.
     ee_end = (pd.Timestamp(end_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-    ic = (
-        _load_modis_collection(start_date, ee_end, region)
-        if source == "modis"
-        else _load_sentinel2_collection(start_date, ee_end, region)
-    )
-
-    if mask_cropland:
-        logger.info("Applying cropland mask (Dynamic World)")
-        ic = apply_cropland_mask(ic, region)
-
-    if freq != "Original":
-        ic = _aggregate_temporal(ic, start_date, ee_end, freq)
-
     reducer = _build_reducer(stats)
-    fc = _compute_zonal_stats(ic, features, reducer, scale)
 
     if export_to_drive:
+        ic = _prepare_gee_collection(
+            source, start_date, ee_end, region, mask_cropland, freq
+        )
+        fc = _compute_zonal_stats(ic, features, reducer, scale)
         filename = _generate_export_filename(source, start_date, end_date)
         from evy._convert import export_to_drive as _export
 
@@ -237,12 +232,31 @@ def zonal_stats(
         gee_cols = [_GEE_STAT_NAMES.get(c, c) for c in cols]
         fc = fc.select(gee_cols, cols, False)
         return _export(fc, filename, drive_folder or "evy_exports", selectors=cols)
-    else:
-        # Fetch without geometry and join in client-side if needed
-        df = fc_to_dataframe(fc)
-        if include_geometry:
-            df = _join_geometries(df, boundaries)
-        return _to_output_contract(df, zone_col, stats, include_geometry)
+
+    frames = []
+    for batch_start, batch_end in _gee_date_batches(start_date, ee_end, freq):
+        ic = _prepare_gee_collection(
+            source, batch_start, batch_end, region, mask_cropland, freq
+        )
+        for offset in range(0, len(boundaries_with_id), _GEE_ZONE_BATCH_SIZE):
+            zone_batch = boundaries_with_id.iloc[offset : offset + _GEE_ZONE_BATCH_SIZE]
+            logger.info(
+                "Fetching Earth Engine batch %s to %s, zones %d-%d",
+                batch_start,
+                batch_end,
+                offset + 1,
+                offset + len(zone_batch),
+            )
+            batch_features = _gdf_to_ee_feature_collection(zone_batch)
+            frames.append(
+                fc_to_dataframe(
+                    _compute_zonal_stats(ic, batch_features, reducer, scale)
+                )
+            )
+    df = pd.concat(frames, ignore_index=True)
+    if include_geometry:
+        df = _join_geometries(df, boundaries)
+    return _to_output_contract(df, zone_col, stats, include_geometry)
 
 
 def _to_output_contract(
@@ -346,6 +360,47 @@ def _compute_zonal_stats(ic, features, reducer, scale: int):
 
     all_stats = ic.map(reduce_image)
     return all_stats.flatten()
+
+
+def _prepare_gee_collection(source, start_date, end_date, region, mask_cropland, freq):
+    """Load and process one independent Earth Engine date batch."""
+    ic = (
+        _load_modis_collection(start_date, end_date, region)
+        if source == "modis"
+        else _load_sentinel2_collection(start_date, end_date, region)
+    )
+    if mask_cropland:
+        ic = apply_cropland_mask(ic, region)
+    if freq != "Original":
+        ic = _aggregate_temporal(ic, start_date, end_date, freq)
+    return ic
+
+
+def _gee_date_batches(start_date: str, end_date: str, freq: str):
+    """Split an exclusive GEE date range without splitting aggregate periods."""
+    start = pd.Timestamp(start_date)
+    end = pd.Timestamp(end_date)
+
+    if freq == "Original":
+        batches = []
+        while start < end:
+            batch_end = min(start + pd.DateOffset(months=_GEE_BATCH_MONTHS), end)
+            batches.append((start.strftime("%Y-%m-%d"), batch_end.strftime("%Y-%m-%d")))
+            start = batch_end
+        return batches
+
+    period, period_months = _GEE_PERIODS[freq]
+    periods = pd.period_range(start, end - pd.Timedelta(days=1), freq=period)
+    periods_per_batch = max(1, _GEE_BATCH_MONTHS // period_months)
+    batches = []
+    for offset in range(0, len(periods), periods_per_batch):
+        group = periods[offset : offset + periods_per_batch]
+        batch_start = max(start, group[0].start_time)
+        batch_end = min(end, group[-1].end_time + pd.Timedelta(nanoseconds=1))
+        batches.append(
+            (batch_start.strftime("%Y-%m-%d"), batch_end.strftime("%Y-%m-%d"))
+        )
+    return batches
 
 
 def _aggregate_temporal(ic, start_date: str, end_date: str, freq: str):

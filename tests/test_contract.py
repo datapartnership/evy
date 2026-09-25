@@ -7,7 +7,7 @@ import rioxarray  # noqa: F401 — activates .rio accessor
 import xarray as xr
 
 from evy import compute_zonal_stats, zonal_stats
-from evy.zonal import _to_output_contract
+from evy.zonal import _gee_date_batches, _to_output_contract
 
 
 def _synthetic_modis(evi_values):
@@ -114,3 +114,16 @@ def test_local_block_size_does_not_change_results(small_boundaries, monkeypatch)
     )
     pd.testing.assert_frame_equal(one_block, many_blocks)
     assert len(one_block) == 3 * len(small_boundaries)
+
+
+def test_gee_batches_do_not_split_aggregate_periods():
+    assert _gee_date_batches("2022-02-10", "2023-03-21", "ME") == [
+        ("2022-02-10", "2022-08-01"),
+        ("2022-08-01", "2023-02-01"),
+        ("2023-02-01", "2023-03-21"),
+    ]
+    assert _gee_date_batches("2022-02-10", "2024-03-21", "YE") == [
+        ("2022-02-10", "2023-01-01"),
+        ("2023-01-01", "2024-01-01"),
+        ("2024-01-01", "2024-03-21"),
+    ]
