@@ -3,6 +3,8 @@
 import logging
 import os
 
+import ee
+
 logger = logging.getLogger(__name__)
 
 _initialized = False
@@ -35,64 +37,35 @@ def authenticate(project: str | None = None, force: bool = False) -> None:
         logger.debug("Earth Engine already initialized")
         return
 
-    try:
-        import ee
-    except ImportError as e:
-        raise RuntimeError(
-            "earthengine-api is not installed. "
-            "Install it with: pip install earthengine-api"
-        ) from e
-
     if project is None:
         project = os.environ.get("GEE_PROJECT")
 
     try:
-        if not force:
-            try:
-                ee.Initialize(project=project)
-                _initialized = True
-                logger.info("Earth Engine initialized successfully")
-                return
-            except ee.EEException:
-                pass
-
         ee.Initialize(project=project)
-        _initialized = True
-        logger.info("Earth Engine initialized successfully")
-
     except Exception as e:
-        error_msg = str(e)
-        if "credentials" in error_msg.lower() or "authenticate" in error_msg.lower():
+        error_msg = str(e).lower()
+        if "credentials" in error_msg or "authenticate" in error_msg:
             raise RuntimeError(
                 "Earth Engine authentication required. "
                 "Please run 'earthengine authenticate' in your terminal first."
             ) from e
         raise RuntimeError(f"Failed to initialize Earth Engine: {e}") from e
 
+    _initialized = True
+    logger.info("Earth Engine initialized successfully")
+
 
 def is_authenticated() -> bool:
     """
-    Check if Earth Engine is authenticated and initialized.
+    Check if Earth Engine is initialized, without initializing it.
 
     Returns
     -------
     bool
-        True if authenticated and initialized, False otherwise
+        True if Earth Engine is initialized in this session, False otherwise.
+        Call :func:`authenticate` to initialize it.
     """
-    global _initialized
-
-    if _initialized:
-        return True
-
-    try:
-        import ee
-
-        # Try a simple operation to verify authentication
-        ee.Initialize()
-        _initialized = True
-        return True
-    except Exception:
-        return False
+    return _initialized or ee.data.is_initialized()
 
 
 def _ensure_initialized(project: str | None = None) -> None:

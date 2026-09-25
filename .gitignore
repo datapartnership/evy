@@ -93,3 +93,12 @@ _build/
 
 # setuptools-scm/
 src/*/_version.py
+
+# Data
+data/
+
+# Claude files
+CLAUDE.md
+.claude/
+settings.local.json
+

@@ -89,8 +89,6 @@ def _bitwise_extract(
     ee.Image
         Image with extracted bit values
     """
-    import ee
-
     to_bit = from_bit if to_bit is None else to_bit
     mask_size = ee.Number(1).add(to_bit).subtract(from_bit)
     mask = ee.Number(1).leftShift(mask_size).subtract(1)
@@ -346,7 +344,7 @@ def _build_yearly_cropland_masks(
         mask_year = year.max(2015)
 
         yearly_start = ee.Date.fromYMD(mask_year, 1, 1)
-        yearly_end = ee.Date.fromYMD(mask_year, 12, 31)
+        yearly_end = yearly_start.advance(1, "year")  # end is exclusive
 
         yearly_lc = (
             ee.ImageCollection(DYNAMIC_WORLD_COLLECTION)

@@ -20,6 +20,51 @@ from evy.collections import (
 
 logger = logging.getLogger(__name__)
 
+# Output contract shared by both backends: ``date`` (period start), the
+# ``zone_col`` column, one column per stat below, and optionally ``geometry``.
+STATS = ("mean", "median", "min", "max", "std", "sum", "count")
+FREQS = ("Original", "ME", "QE", "YE")
+# evy stat name -> GEE reducer output name (only where they differ).
+_GEE_STAT_NAMES = {"std": "stdDev"}
+# pandas period alias and length in months, for calendar-aligned GEE composites.
+_GEE_PERIODS = {"ME": ("M", 1), "QE": ("Q", 3), "YE": ("Y", 12)}
+_GEE_BATCH_MONTHS = 6
+_GEE_ZONE_BATCH_SIZE = 50
+
+
+def _default_dates(start_date: str | None, end_date: str | None) -> tuple[str, str]:
+    """Fill missing dates: end defaults to today, start to one year earlier."""
+    now = datetime.now()
+    end_date = now.strftime("%Y-%m-%d") if end_date is None else end_date
+    if start_date is None:
+        start_date = (now - timedelta(days=365)).strftime("%Y-%m-%d")
+    return start_date, end_date
+
+
+def _validate_args(backend, source, freq, stats, gee_only: list[str]) -> list[str]:
+    """Check arguments before any download. Returns ``stats`` as a list."""
+    if backend not in ("gee", "local"):
+        raise ValueError(f"Unknown backend: {backend!r}. Available: 'gee', 'local'")
+    if source not in ("modis", "sentinel2"):
+        raise ValueError(f"Unknown source: {source!r}. Available: 'modis', 'sentinel2'")
+    if freq not in FREQS:
+        raise ValueError(f"Unknown freq: {freq!r}. Available: {list(FREQS)}")
+    stats = [stats] if isinstance(stats, str) else list(stats)
+    unknown_stats = [s for s in stats if s not in STATS]
+    if unknown_stats:
+        raise ValueError(f"Unknown stats: {unknown_stats}. Available: {list(STATS)}")
+    if backend == "local":
+        if gee_only:
+            raise ValueError(
+                f"Parameters {gee_only} are only supported with backend='gee'"
+            )
+        if source == "sentinel2":
+            raise ValueError(
+                "Local backend currently only supports MODIS. "
+                "Use source='modis' or backend='gee'."
+            )
+    return stats
+
 
 def zonal_stats(
     boundaries: gpd.GeoDataFrame,
@@ -33,7 +78,10 @@ def zonal_stats(
     stats: str | list[str] = "mean",
     include_geometry: bool = False,
     mask_cropland: bool = True,
-    **kwargs,
+    scale: int | None = None,
+    export_to_drive: bool = False,
+    drive_folder: str | None = None,
+    project: str | None = None,
 ) -> pd.DataFrame | gpd.GeoDataFrame | str:
     """
     Compute EVI zonal statistics over administrative boundaries.
@@ -63,9 +111,10 @@ def zonal_stats(
         End date as ISO string (e.g., '2024-12-31').
         Default: today
     freq:
-        Temporal aggregation frequency (pandas-style):
+        Temporal aggregation frequency. Each period is a calendar period,
+        labelled by its start date in the output ``date`` column:
         - 'Original': Original data (composites from source satellites)
-        - 'ME': Monthly (end of month)
+        - 'ME': Monthly
         - 'QE': Quarterly
         - 'YE': Yearly
     stats:
@@ -83,31 +132,29 @@ def zonal_stats(
     mask_cropland:
         If False, do not mask non-cropland areas using Dynamic World
         land cover classification.
-    **kwargs:
-        Additional keyword arguments. The following are GEE-only and only
-        supported with ``backend='gee'``:
-
-        scale : int or None
-            Resolution in meters. Default depends on source:
-            - MODIS: 250m (native resolution)
-            - Sentinel-2: 10m (native resolution)
-        export_to_drive : bool
-            If True, export results to Google Drive instead of returning directly.
-            Useful for large queries that might timeout.
-        drive_folder : str
-            Google Drive folder name for exports. Default: 'evy_exports'.
-        project : str or None
-            Google Earth Engine project ID.
-            If None, uses default or environment variable GEE_PROJECT.
+    scale:
+        GEE only. Resolution in meters. Default depends on source:
+        - MODIS: 250m (native resolution)
+        - Sentinel-2: 10m (native resolution)
+    export_to_drive:
+        GEE only. If True, export results to Google Drive instead of
+        returning them. Useful for large queries that might time out.
+    drive_folder:
+        GEE only. Google Drive folder name for exports. Default: 'evy_exports'.
+    project:
+        GEE only. Google Earth Engine project ID. If None, uses the default
+        or the GEE_PROJECT environment variable.
 
     Returns
     -------
     pd.DataFrame or gpd.GeoDataFrame or str
-        If export_to_drive=False: Zonal statistics with columns:
-        - 'date': Date of observation
+        If export_to_drive=False: Zonal statistics with columns (identical
+        for both backends):
+        - 'date': Start of the period (or observation date for 'Original')
         - ``zone_col``: Zone identifier (the user's original column name)
-        - 'evi_mean', 'evi_std', etc.: Computed statistics
-        - 'geometry': (only if include_geometry=True)
+        - 'mean', 'std', etc.: One column per requested statistic
+        - 'geometry': Only if include_geometry=True, in the CRS of
+          ``boundaries``
 
         If export_to_drive=True: Task ID string for the export task
     """
@@ -123,26 +170,20 @@ def zonal_stats(
             f"Available columns: {list(boundaries.columns)}"
         )
 
-    end_date = datetime.now().strftime("%Y-%m-%d") if end_date is None else end_date
-    start_date = (
-        (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
-        if start_date is None
-        else start_date
-    )
+    gee_only = [
+        name
+        for name, value in [
+            ("scale", scale),
+            ("export_to_drive", export_to_drive),
+            ("drive_folder", drive_folder),
+            ("project", project),
+        ]
+        if value
+    ]
+    stats = _validate_args(backend, source, freq, stats, gee_only)
+    start_date, end_date = _default_dates(start_date, end_date)
 
     if backend == "local":
-        gee_only = {"scale", "export_to_drive", "drive_folder", "project"}
-        invalid = set(kwargs) & gee_only
-        if invalid:
-            raise ValueError(
-                f"Parameters {invalid} are only supported with backend='gee'"
-            )
-
-        if source == "sentinel2":
-            raise ValueError(
-                "Local backend currently only supports MODIS. Use source='modis' or backend='gee'.",
-            )
-
         from evy._zonal_local import _zonal_stats_local
 
         return _zonal_stats_local(
@@ -156,15 +197,7 @@ def zonal_stats(
             mask_cropland=mask_cropland,
         )
 
-    scale = kwargs.get("scale", None)
-    export_to_drive = kwargs.get("export_to_drive", False)
-    drive_folder = kwargs.get("drive_folder", "evy_exports")
-    project = kwargs.get("project", None)
-
     _ensure_initialized(project)
-
-    if source not in ("modis", "sentinel2"):
-        raise ValueError(f"Unknown source: {source}. Available: 'modis', 'sentinel2'")
 
     if scale is None:
         scale = 250 if source == "modis" else 10
@@ -174,36 +207,69 @@ def zonal_stats(
         f"({start_date} to {end_date})"
     )
 
-    features = _gdf_to_ee_feature_collection(boundaries)
+    boundaries_with_id = boundaries.copy()
+    if "_evy_boundary_id" not in boundaries_with_id:
+        boundaries_with_id["_evy_boundary_id"] = range(len(boundaries_with_id))
+    features = _gdf_to_ee_feature_collection(boundaries_with_id)
     region = features.geometry()
 
-    ic = (
-        _load_modis_collection(start_date, end_date, region)
-        if source == "modis"
-        else _load_sentinel2_collection(start_date, end_date, region)
-    )
-
-    if mask_cropland:
-        logger.info("Applying cropland mask (Dynamic World)")
-        ic = apply_cropland_mask(ic, region)
-
-    if freq != "Original":
-        ic = _aggregate_temporal(ic, start_date, end_date, freq)
-
+    # GEE end dates are exclusive; add one day so end_date is included,
+    # matching the local backend's inclusive STAC search.
+    ee_end = (pd.Timestamp(end_date) + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     reducer = _build_reducer(stats)
-    fc = _compute_zonal_stats(ic, features, reducer, scale)
 
     if export_to_drive:
+        ic = _prepare_gee_collection(
+            source, start_date, ee_end, region, mask_cropland, freq
+        )
+        fc = _compute_zonal_stats(ic, features, reducer, scale)
         filename = _generate_export_filename(source, start_date, end_date)
         from evy._convert import export_to_drive as _export
 
-        return _export(fc, filename, drive_folder)
-    else:
-        # Fetch without geometry and join in client-side if needed
-        df = fc_to_dataframe(fc, include_geometry=False)
-        if include_geometry:
-            return _join_geometries(df, boundaries)
-        return df
+        # Apply the output contract server-side, so the file on Drive has the
+        # same columns as the returned DataFrame.
+        cols = ["date", zone_col, *stats]
+        gee_cols = [_GEE_STAT_NAMES.get(c, c) for c in cols]
+        fc = fc.select(gee_cols, cols, False)
+        return _export(fc, filename, drive_folder or "evy_exports", selectors=cols)
+
+    frames = []
+    for batch_start, batch_end in _gee_date_batches(start_date, ee_end, freq):
+        ic = _prepare_gee_collection(
+            source, batch_start, batch_end, region, mask_cropland, freq
+        )
+        for offset in range(0, len(boundaries_with_id), _GEE_ZONE_BATCH_SIZE):
+            zone_batch = boundaries_with_id.iloc[offset : offset + _GEE_ZONE_BATCH_SIZE]
+            logger.info(
+                "Fetching Earth Engine batch %s to %s, zones %d-%d",
+                batch_start,
+                batch_end,
+                offset + 1,
+                offset + len(zone_batch),
+            )
+            batch_features = _gdf_to_ee_feature_collection(zone_batch)
+            frames.append(
+                fc_to_dataframe(
+                    _compute_zonal_stats(ic, batch_features, reducer, scale)
+                )
+            )
+    df = pd.concat(frames, ignore_index=True)
+    if include_geometry:
+        df = _join_geometries(df, boundaries)
+    return _to_output_contract(df, zone_col, stats, include_geometry)
+
+
+def _to_output_contract(
+    df: pd.DataFrame, zone_col: str, stats: list[str], include_geometry: bool
+) -> pd.DataFrame | gpd.GeoDataFrame:
+    """Keep only contract columns from GEE output, in a fixed order.
+
+    GEE names the standard deviation ``stdDev`` and passes every boundary
+    attribute through; both are normalized here to match the local backend.
+    """
+    df = df.rename(columns={v: k for k, v in _GEE_STAT_NAMES.items()})
+    cols = ["date", zone_col, *stats] + (["geometry"] if include_geometry else [])
+    return df.reindex(columns=cols)
 
 
 def _join_geometries(df: pd.DataFrame, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -251,12 +317,8 @@ def _join_geometries(df: pd.DataFrame, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFram
     )
 
 
-def _build_reducer(stats: str | list[str]):
+def _build_reducer(stats: list[str]):
     """Build combined reducer for multiple statistics."""
-
-    if isinstance(stats, str):
-        stats = [stats]
-
     reducer_map = {
         "mean": ee.Reducer.mean(),
         "median": ee.Reducer.median(),
@@ -267,13 +329,7 @@ def _build_reducer(stats: str | list[str]):
         "count": ee.Reducer.count(),
     }
 
-    try:
-        selected_reducers = [reducer_map[s] for s in stats]
-    except KeyError as e:
-        raise ValueError(
-            f"Unknown statistic: {e.args[0]}. Available: {list(reducer_map.keys())}"
-        )
-
+    selected_reducers = [reducer_map[s] for s in stats]
     return reduce(lambda a, b: a.combine(b, sharedInputs=True), selected_reducers)
 
 
@@ -306,83 +362,69 @@ def _compute_zonal_stats(ic, features, reducer, scale: int):
     return all_stats.flatten()
 
 
+def _prepare_gee_collection(source, start_date, end_date, region, mask_cropland, freq):
+    """Load and process one independent Earth Engine date batch."""
+    ic = (
+        _load_modis_collection(start_date, end_date, region)
+        if source == "modis"
+        else _load_sentinel2_collection(start_date, end_date, region)
+    )
+    if mask_cropland:
+        ic = apply_cropland_mask(ic, region)
+    if freq != "Original":
+        ic = _aggregate_temporal(ic, start_date, end_date, freq)
+    return ic
+
+
+def _gee_date_batches(start_date: str, end_date: str, freq: str):
+    """Split an exclusive GEE date range without splitting aggregate periods."""
+    start = pd.Timestamp(start_date)
+    end = pd.Timestamp(end_date)
+
+    if freq == "Original":
+        batches = []
+        while start < end:
+            batch_end = min(start + pd.DateOffset(months=_GEE_BATCH_MONTHS), end)
+            batches.append((start.strftime("%Y-%m-%d"), batch_end.strftime("%Y-%m-%d")))
+            start = batch_end
+        return batches
+
+    period, period_months = _GEE_PERIODS[freq]
+    periods = pd.period_range(start, end - pd.Timedelta(days=1), freq=period)
+    periods_per_batch = max(1, _GEE_BATCH_MONTHS // period_months)
+    batches = []
+    for offset in range(0, len(periods), periods_per_batch):
+        group = periods[offset : offset + periods_per_batch]
+        batch_start = max(start, group[0].start_time)
+        batch_end = min(end, group[-1].end_time + pd.Timedelta(nanoseconds=1))
+        batches.append(
+            (batch_start.strftime("%Y-%m-%d"), batch_end.strftime("%Y-%m-%d"))
+        )
+    return batches
+
+
 def _aggregate_temporal(ic, start_date: str, end_date: str, freq: str):
     """
-    Aggregate ImageCollection temporally.
+    Aggregate ImageCollection into calendar-period median composites.
 
-    Groups images by time period and computes median.
+    Periods are calendar months, quarters, or years (not offsets from
+    ``start_date``), and each composite is stamped with its period start.
+    This matches the local backend's ``MS``/``QS``/``YS`` resampling.
     """
-    import ee
+    period, months = _GEE_PERIODS[freq]
+    # end_date is exclusive here (caller already added one day).
+    last_day = pd.Timestamp(end_date) - pd.Timedelta(days=1)
+    period_starts = [
+        p.start_time.strftime("%Y-%m-%d")
+        for p in pd.period_range(start_date, last_day, freq=period)
+    ]
 
-    start = ee.Date(start_date)
-    end = ee.Date(end_date)
+    def composite(period_start):
+        start = ee.Date(period_start)
+        filtered = ic.filterDate(start, start.advance(months, "month"))
+        return filtered.median().set("system:time_start", start.millis())
 
-    if freq == "ME":
-        return _aggregate_monthly(ic, start, end)
-    elif freq == "QE":
-        return _aggregate_quarterly(ic, start, end)
-    elif freq == "YE":
-        return _aggregate_yearly(ic, start, end)
-    else:
-        logger.warning(f"Unknown frequency {freq}, returning original collection")
-        return ic
-
-
-def _aggregate_monthly(ic, start, end):
-    """Aggregate to monthly composites."""
-    import ee
-
-    # Generate list of months
-    n_months = end.difference(start, "month").round()
-    months = ee.List.sequence(0, n_months.subtract(1))
-
-    def monthly_composite(month_offset):
-        month_start = start.advance(month_offset, "month")
-        month_end = month_start.advance(1, "month")
-
-        filtered = ic.filterDate(month_start, month_end)
-        composite = filtered.median().set("system:time_start", month_start.millis())
-        return composite
-
-    return ee.ImageCollection.fromImages(months.map(monthly_composite))
-
-
-def _aggregate_quarterly(ic, start, end):
-    """Aggregate to quarterly composites."""
-    import ee
-
-    # Generate list of quarters
-    n_quarters = end.difference(start, "month").divide(3).round()
-    quarters = ee.List.sequence(0, n_quarters.subtract(1))
-
-    def quarterly_composite(quarter_offset):
-        quarter_start = start.advance(ee.Number(quarter_offset).multiply(3), "month")
-        quarter_end = quarter_start.advance(3, "month")
-
-        filtered = ic.filterDate(quarter_start, quarter_end)
-        composite = filtered.median().set("system:time_start", quarter_start.millis())
-        return composite
-
-    return ee.ImageCollection.fromImages(quarters.map(quarterly_composite))
-
-
-def _aggregate_yearly(ic, start, end):
-    """Aggregate to yearly composites."""
-    import ee
-
-    start_year = start.get("year")
-    end_year = end.get("year")
-    years = ee.List.sequence(start_year, end_year)
-
-    def yearly_composite(year):
-        year_start = ee.Date.fromYMD(year, 1, 1)
-        year_end = ee.Date.fromYMD(year, 12, 31)
-
-        filtered = ic.filterDate(year_start, year_end)
-        composite = filtered.median().set("system:time_start", year_start.millis())
-        return composite
-
-    return ee.ImageCollection.fromImages(years.map(yearly_composite))
+    return ee.ImageCollection.fromImages(ee.List(period_starts).map(composite))
 
 
 def _generate_export_filename(source: str, start_date: str, end_date: str) -> str:

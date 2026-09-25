@@ -3,36 +3,34 @@
 import logging
 
 import ee
-import geopandas as gpd
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-CRS = "EPSG:4326"
-
 
 def fc_to_dataframe(
     fc: ee.FeatureCollection,
-    include_geometry: bool = False,
     date_column: str = "date",
-) -> pd.DataFrame | gpd.GeoDataFrame:
+) -> pd.DataFrame:
     """
-    Convert GEE FeatureCollection to pandas DataFrame or GeoDataFrame.
+    Convert a GEE FeatureCollection of zonal statistics to a DataFrame.
+
+    Fetches every page of results through ``ee.data.computeFeatures``, so
+    results larger than the 5,000-element limit of ``getInfo()`` are
+    returned in full (for example, 300 zones x 24 months = 7,200 rows).
 
     Parameters
     ----------
     fc:
-        Earth Engine FeatureCollection with zonal statistics
-    include_geometry:
-        If True, return GeoDataFrame with geometry column.
-        If False, return pandas DataFrame (smaller, faster).
+        Earth Engine FeatureCollection with zonal statistics. Geometries
+        are expected to be stripped already; only properties are returned.
     date_column:
         Name of the date column in the output
 
     Returns
     -------
-    pd.DataFrame or gpd.GeoDataFrame
-        Zonal statistics as tabular data
+    pd.DataFrame
+        One row per feature, one column per feature property.
 
     Raises
     ------
@@ -40,36 +38,22 @@ def fc_to_dataframe(
         If conversion fails
     """
     try:
-        fc_info = fc.getInfo()
-
-        if not fc_info or "features" not in fc_info:
-            logger.warning("Empty FeatureCollection returned")
-            if include_geometry:
-                return gpd.GeoDataFrame(columns=[date_column], crs=CRS)
-            return pd.DataFrame(columns=[date_column])
-
-        features = fc_info["features"]
-
-        if not features:
-            logger.warning("No features in FeatureCollection")
-            if include_geometry:
-                return gpd.GeoDataFrame(columns=[date_column], crs=CRS)
-            return pd.DataFrame(columns=[date_column])
-
-        if include_geometry:
-            gdf = gpd.GeoDataFrame.from_features(features, crs=CRS)
-            if date_column in gdf.columns:
-                gdf[date_column] = pd.to_datetime(gdf[date_column])
-            return gdf
-        else:
-            records = [f["properties"] for f in features]
-            df = pd.DataFrame(records)
-            if date_column in df.columns:
-                df[date_column] = pd.to_datetime(df[date_column])
-            return df
-
+        df = ee.data.computeFeatures(
+            {"expression": fc, "fileFormat": "PANDAS_DATAFRAME"}
+        )
     except Exception as e:
         raise RuntimeError(f"Failed to convert FeatureCollection: {e}") from e
+
+    # The pandas converter adds a "geo" column for geometry, which is null here.
+    df = df.drop(columns="geo", errors="ignore")
+
+    if df.empty:
+        logger.warning("No features in FeatureCollection")
+        return pd.DataFrame(columns=[date_column])
+
+    if date_column in df.columns:
+        df[date_column] = pd.to_datetime(df[date_column])
+    return df
 
 
 def export_to_drive(
@@ -77,6 +61,7 @@ def export_to_drive(
     filename: str,
     folder: str = "evy_exports",
     file_format: str = "CSV",
+    selectors: list[str] | None = None,
 ) -> str:
     """
     Export FeatureCollection to Google Drive.
@@ -91,19 +76,21 @@ def export_to_drive(
         Google Drive folder name
     file_format:
         Export format ('CSV', 'GeoJSON', 'KML', etc.)
+    selectors:
+        Columns to write, in order. Without it, GEE also writes its
+        internal ``system:index`` and ``.geo`` columns.
 
     Returns
     -------
     str
         Task ID for the export task
     """
-    import ee
-
     task = ee.batch.Export.table.toDrive(
         collection=fc,
         description=filename,
         folder=folder,
         fileFormat=file_format,
+        selectors=selectors,
     )
     task.start()
 
@@ -132,8 +119,6 @@ def check_task_status(task_id: str) -> dict:
         - 'description': Task description
         - 'progress': Progress percentage (if available)
     """
-    import ee
-
     tasks = ee.batch.Task.list()
 
     for task in tasks:

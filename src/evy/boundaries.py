@@ -7,14 +7,38 @@ from typing import Union
 import geopandas as gpd
 import requests
 
+from evy.cache import _cache_base
+
 logger = logging.getLogger(__name__)
 
-CACHE_DIR = Path.cwd() / ".evy" / "boundaries"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+def _resolve_cache_dir() -> Path:
+    """Resolve the boundaries cache directory."""
+    return _cache_base() / "boundaries"
+
+
+CACHE_DIR = _resolve_cache_dir()
 _MEMORY_CACHE: dict[str, gpd.GeoDataFrame] = {}
 
 GEOBOUNDARIES_BASE_URL = "https://www.geoboundaries.org/api/current"
 CRS = "EPSG:4326"
+
+
+def _legacy_cache_dir() -> Path:
+    """Old cwd-based cache location used by evy before the platformdirs migration."""
+    return Path.cwd() / ".evy" / "boundaries"
+
+
+def _warn_legacy_cache_once():
+    """Emit a one-time warning if an old cwd-based cache is present."""
+    legacy = _legacy_cache_dir()
+    if legacy.exists() and any(legacy.glob("*.geojson")):
+        logger.warning(
+            "Found legacy boundaries cache at %s. evy now caches to %s; "
+            "you can safely delete the legacy directory.",
+            legacy,
+            CACHE_DIR,
+        )
 
 
 def get_boundaries(
@@ -68,7 +92,7 @@ def get_boundaries(
 
     if use_cache and cache_key in _MEMORY_CACHE:
         logger.debug(f"Loading boundaries from memory cache: {cache_key}")
-        return _MEMORY_CACHE[cache_key]
+        return _MEMORY_CACHE[cache_key].copy()
 
     cache_file = CACHE_DIR / f"{cache_key}.geojson"
 
@@ -76,7 +100,7 @@ def get_boundaries(
         logger.info(f"Loading boundaries from disk cache: {cache_file}")
         gdf = gpd.read_file(cache_file)
         _MEMORY_CACHE[cache_key] = gdf
-        return gdf
+        return gdf.copy()
 
     logger.info(f"Fetching {iso3} ADM{admin_level} from GeoBoundaries API")
 
@@ -106,11 +130,14 @@ def get_boundaries(
 
     gdf = _ensure_crs(gdf)
 
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _warn_legacy_cache_once()
     logger.info(f"Caching boundaries to: {cache_file}")
     gdf.to_file(cache_file, driver="GeoJSON")
     _MEMORY_CACHE[cache_key] = gdf
 
-    return gdf
+    # Return a copy so callers who add columns do not change the cached object.
+    return gdf.copy()
 
 
 def load_boundaries(path: Union[str, Path]) -> gpd.GeoDataFrame:
@@ -223,8 +250,10 @@ def _gdf_to_ee_feature_collection(gdf: gpd.GeoDataFrame):
     # Simplify geometries to reduce computation graph size
     # This prevents "Request payload size exceeds 10MB" errors when boundaries
     # have high coordinate density (e.g., complex coastlines, detailed admin boundaries)
-    # Tolerance of 0.001 degrees ≈ 111m at equator - safe for MODIS (250m) and
-    # Sentinel-2 (10m) since zonal stats use pixel centroids, not exact polygon edges
+    # Tolerance of 0.001 degrees ≈ 111m at the equator: below one MODIS pixel
+    # (250m), so edge effects are small. For Sentinel-2 (10m) it can move
+    # boundary pixels in or out of a zone; that matters mainly for small zones.
+    # ponytail: fixed tolerance; make it depend on `scale` if S2 edge accuracy matters.
     simplified = gdf.copy()
     simplified["geometry"] = simplified.geometry.simplify(
         tolerance=0.001, preserve_topology=True

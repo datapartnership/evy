@@ -39,6 +39,12 @@ bibtex_bibfiles:
 #######################################################################################
 # Sphinx settings
 sphinx:
+  extra_extensions:
+    - autodoc2
   config:
+    autodoc2_packages:
+      - path: src/evy
+        auto_mode: false
+    autodoc2_render_plugin: myst
     html_show_copyright: false
     html_last_updated_fmt: "%b %d, %Y"

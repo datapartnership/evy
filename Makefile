@@ -47,4 +47,4 @@ clean:
 
 # Build documentation
 build:
-	uvx --from "jupyter-book>1,<2" jupyter-book build . --config docs/_config.yml --toc docs/_toc.yml
+	uvx --with sphinx-autodoc2 --from "jupyter-book>1,<2" jupyter-book build . --config docs/_config.yml --toc docs/_toc.yml
