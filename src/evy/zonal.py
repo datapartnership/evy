@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 # ``zone_col`` column, one column per stat below, and optionally ``geometry``.
 STATS = ("mean", "median", "min", "max", "std", "sum", "count")
 FREQS = ("Original", "ME", "QE", "YE")
-_GEE_KWARGS = {"scale", "export_to_drive", "drive_folder", "project"}
 # evy stat name -> GEE reducer output name (only where they differ).
 _GEE_STAT_NAMES = {"std": "stdDev"}
 # pandas period alias and length in months, for calendar-aligned GEE composites.
@@ -40,7 +39,7 @@ def _default_dates(start_date: str | None, end_date: str | None) -> tuple[str, s
     return start_date, end_date
 
 
-def _validate_args(backend, source, freq, stats, kwargs) -> list[str]:
+def _validate_args(backend, source, freq, stats, gee_only: list[str]) -> list[str]:
     """Check arguments before any download. Returns ``stats`` as a list."""
     if backend not in ("gee", "local"):
         raise ValueError(f"Unknown backend: {backend!r}. Available: 'gee', 'local'")
@@ -52,13 +51,10 @@ def _validate_args(backend, source, freq, stats, kwargs) -> list[str]:
     unknown_stats = [s for s in stats if s not in STATS]
     if unknown_stats:
         raise ValueError(f"Unknown stats: {unknown_stats}. Available: {list(STATS)}")
-    unknown_kwargs = set(kwargs) - _GEE_KWARGS
-    if unknown_kwargs:
-        raise TypeError(f"Unexpected keyword arguments: {sorted(unknown_kwargs)}")
     if backend == "local":
-        if kwargs:
+        if gee_only:
             raise ValueError(
-                f"Parameters {sorted(kwargs)} are only supported with backend='gee'"
+                f"Parameters {gee_only} are only supported with backend='gee'"
             )
         if source == "sentinel2":
             raise ValueError(
@@ -80,7 +76,10 @@ def zonal_stats(
     stats: str | list[str] = "mean",
     include_geometry: bool = False,
     mask_cropland: bool = True,
-    **kwargs,
+    scale: int | None = None,
+    export_to_drive: bool = False,
+    drive_folder: str | None = None,
+    project: str | None = None,
 ) -> pd.DataFrame | gpd.GeoDataFrame | str:
     """
     Compute EVI zonal statistics over administrative boundaries.
@@ -131,22 +130,18 @@ def zonal_stats(
     mask_cropland:
         If False, do not mask non-cropland areas using Dynamic World
         land cover classification.
-    **kwargs:
-        Additional keyword arguments. The following are GEE-only and only
-        supported with ``backend='gee'``:
-
-        scale : int or None
-            Resolution in meters. Default depends on source:
-            - MODIS: 250m (native resolution)
-            - Sentinel-2: 10m (native resolution)
-        export_to_drive : bool
-            If True, export results to Google Drive instead of returning directly.
-            Useful for large queries that might timeout.
-        drive_folder : str
-            Google Drive folder name for exports. Default: 'evy_exports'.
-        project : str or None
-            Google Earth Engine project ID.
-            If None, uses default or environment variable GEE_PROJECT.
+    scale:
+        GEE only. Resolution in meters. Default depends on source:
+        - MODIS: 250m (native resolution)
+        - Sentinel-2: 10m (native resolution)
+    export_to_drive:
+        GEE only. If True, export results to Google Drive instead of
+        returning them. Useful for large queries that might time out.
+    drive_folder:
+        GEE only. Google Drive folder name for exports. Default: 'evy_exports'.
+    project:
+        GEE only. Google Earth Engine project ID. If None, uses the default
+        or the GEE_PROJECT environment variable.
 
     Returns
     -------
@@ -173,7 +168,17 @@ def zonal_stats(
             f"Available columns: {list(boundaries.columns)}"
         )
 
-    stats = _validate_args(backend, source, freq, stats, kwargs)
+    gee_only = [
+        name
+        for name, value in [
+            ("scale", scale),
+            ("export_to_drive", export_to_drive),
+            ("drive_folder", drive_folder),
+            ("project", project),
+        ]
+        if value
+    ]
+    stats = _validate_args(backend, source, freq, stats, gee_only)
     start_date, end_date = _default_dates(start_date, end_date)
 
     if backend == "local":
@@ -189,11 +194,6 @@ def zonal_stats(
             include_geometry=include_geometry,
             mask_cropland=mask_cropland,
         )
-
-    scale = kwargs.get("scale", None)
-    export_to_drive = kwargs.get("export_to_drive", False)
-    drive_folder = kwargs.get("drive_folder", "evy_exports")
-    project = kwargs.get("project", None)
 
     _ensure_initialized(project)
 
@@ -236,7 +236,7 @@ def zonal_stats(
         cols = ["date", zone_col, *stats]
         gee_cols = [_GEE_STAT_NAMES.get(c, c) for c in cols]
         fc = fc.select(gee_cols, cols, False)
-        return _export(fc, filename, drive_folder, selectors=cols)
+        return _export(fc, filename, drive_folder or "evy_exports", selectors=cols)
     else:
         # Fetch without geometry and join in client-side if needed
         df = fc_to_dataframe(fc)

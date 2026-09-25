@@ -153,7 +153,7 @@ def test_cached_zonal_stats_recompute_forces_recall(
 
 
 def test_cached_zonal_stats_rejects_drive_export(small_boundaries):
-    with pytest.raises(ValueError, match="export_to_drive"):
+    with pytest.raises(TypeError, match="export_to_drive"):
         cached_zonal_stats(
             small_boundaries,
             zone_col="shapeName",

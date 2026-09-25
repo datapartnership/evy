@@ -105,7 +105,8 @@ def cached_zonal_stats(
     cache_key: str | None = None,
     cache_dir: Union[str, Path, None] = None,
     recompute: bool = False,
-    **kwargs,
+    scale: int | None = None,
+    project: str | None = None,
 ) -> pd.DataFrame | gpd.GeoDataFrame:
     """Disk-cached wrapper around :func:`evy.zonal_stats`.
 
@@ -115,10 +116,12 @@ def cached_zonal_stats(
 
     Parameters
     ----------
-    boundaries, zone_col, backend, source, start_date, end_date, freq, stats, include_geometry, mask_cropland
+    boundaries, zone_col, backend, source, start_date, end_date, freq, stats, include_geometry, mask_cropland, scale, project
         Forwarded to :func:`evy.zonal_stats` on cache miss. The cache key is
         derived from these arguments, so changing any of them produces a
-        different cache file.
+        different cache file (``project`` is not part of the key, because
+        it does not change the result). Drive export is not supported; use
+        :func:`evy.zonal_stats` directly for that.
     cache_key : str, optional
         Explicit cache key, used verbatim instead of the hash of call
         arguments. Useful when you want to share an entry across slightly
@@ -131,11 +134,6 @@ def cached_zonal_stats(
     recompute : bool
         Force recomputation, ignoring any cache hit. The fresh result is
         written back to the cache.
-    **kwargs
-        Additional GEE-only keyword arguments forwarded to
-        :func:`evy.zonal_stats`. ``export_to_drive=True`` is rejected —
-        caching a Drive-export task ID is meaningless; use
-        :func:`evy.zonal_stats` directly for that path.
 
     Returns
     -------
@@ -154,12 +152,6 @@ def cached_zonal_stats(
     # First call: ~minutes. Second call: cache hit, ~milliseconds.
     """
     from evy.zonal import _default_dates, zonal_stats
-
-    if kwargs.get("export_to_drive", False):
-        raise ValueError(
-            "cached_zonal_stats does not support export_to_drive=True. "
-            "Use evy.zonal_stats directly for Drive exports."
-        )
 
     if cache_dir is None:
         cache_dir = _resolve_cache_dir()
@@ -181,7 +173,7 @@ def cached_zonal_stats(
         mask_cropland=mask_cropland,
         include_geometry=include_geometry,
         user_key=cache_key,
-        extra=kwargs,
+        extra={"scale": scale} if scale else None,
     )
     cache_file = cache_dir / f"{key}.parquet"
 
@@ -203,7 +195,8 @@ def cached_zonal_stats(
         stats=stats,
         include_geometry=include_geometry,
         mask_cropland=mask_cropland,
-        **kwargs,
+        scale=scale,
+        project=project,
     )
 
     cache_dir.mkdir(parents=True, exist_ok=True)
