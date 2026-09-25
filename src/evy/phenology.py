@@ -133,24 +133,20 @@ def extract_phenology(
     amplitude = max_val - min_val
 
     sos = None
-    mos = None
     eos = None
+    mos = dates[int(np.argmax(smoothed))]
 
     threshold_value = min_val + threshold * amplitude
 
-    # SOS
-    for i in range(1, len(smoothed)):
-        if sos is None and smoothed[i] > threshold_value:
-            sos = dates[i]
-
-        # MOS
-        if smoothed[i] == max_val:
-            mos = dates[i]
-
-        # EOS
-        if sos is not None and smoothed[i] < threshold_value:
-            eos = dates[i]
-            break
+    # A flat series has no season; skip detection so float noise from the
+    # smoothing step cannot create a fake SOS.
+    if not np.isclose(amplitude, 0.0):
+        for i in range(1, len(smoothed)):
+            if sos is None and smoothed[i] > threshold_value:
+                sos = dates[i]
+            elif sos is not None and smoothed[i] < threshold_value:
+                eos = dates[i]
+                break
 
     return {
         "sos": sos,
@@ -174,8 +170,15 @@ def calculate_phenology(
     """
     Calculate phenology metrics from zonal statistics DataFrame.
 
-    Aggregates data by month, applies preprocessing, and extracts
-    SOS, MOS, and EOS for each group (if specified).
+    Aggregates data by calendar month (averaging across years), applies
+    preprocessing, and extracts SOS, MOS, and EOS for each group (if
+    specified).
+
+    The 12-month cycle is treated as circular: detection starts from the
+    lowest month, so a season that crosses the new year (e.g. October to
+    March) is found as one season. In that case ``sos`` is greater than
+    ``eos`` (e.g. ``sos=10``, ``eos=4``). With two seasons per year, the
+    first season after the lowest month is returned.
 
     Parameters
     ----------
@@ -203,8 +206,9 @@ def calculate_phenology(
         - 'value': Mean vegetation index for that month
         - 'smoothed': Smoothed value
         - 'sos': Start of season month
-        - 'mos': Middle of season month
-        - 'eos': End of season month
+        - 'mos': Middle of season month (month of peak smoothed value)
+        - 'eos': End of season month (may be less than 'sos' if the
+          season crosses the new year)
         - Plus group_col if specified
     """
     df = df.copy()
@@ -219,26 +223,31 @@ def calculate_phenology(
             .agg(value=(value_col, "mean"))
         )
 
+        # Rotate the cycle to start at the lowest month, so a season that
+        # crosses the new year is one contiguous run instead of two pieces.
+        start = monthly["value"].idxmin()
+        rotated = pd.concat([monthly.iloc[start:], monthly.iloc[:start]])
+
         smoothed = preprocess_series(
-            monthly["value"],
+            rotated["value"].reset_index(drop=True),
             window_length=window_length,
             polyorder=polyorder,
         )
 
         phenology = extract_phenology(
             smoothed,
-            monthly["month"].values,
+            rotated["month"].values,
             threshold=threshold,
         )
 
-        result = monthly.assign(
+        result = rotated.assign(
             smoothed=np.round(smoothed, 4),
             sos=phenology["sos"],
             mos=phenology["mos"],
             eos=phenology["eos"],
         )
 
-        return result
+        return result.sort_values("month").reset_index(drop=True)
 
     if group_col is None:
         return _calculate_for_group(df)
@@ -278,7 +287,14 @@ def get_growing_season(
     Returns
     -------
     tuple[int, int]
-        (start_month, end_month) as integers 1-12
+        (start_month, end_month) as integers 1-12. If the season crosses
+        the new year, start_month is greater than end_month (e.g. (10, 4)).
+
+    Raises
+    ------
+    ValueError
+        If no season can be detected (no clear rise above and fall below
+        the threshold).
     """
     phenology = calculate_phenology(
         df,
@@ -290,18 +306,22 @@ def get_growing_season(
     sos = phenology["sos"].iloc[0]
     eos = phenology["eos"].iloc[0]
 
-    if sos is None or eos is None:
-        logger.warning("Could not determine growing season, using defaults (2-6)")
-        return (2, 6)
+    if pd.isna(sos) or pd.isna(eos):
+        raise ValueError(
+            "Could not detect a growing season: the series has no clear rise "
+            "above and fall below the threshold. Choose the months yourself "
+            "and pass them to filter_growing_season()."
+        )
 
     return (int(sos), int(eos))
 
 
 def filter_growing_season(
     df: pd.DataFrame,
+    *,
+    start_month: int,
+    end_month: int,
     date_col: str = "date",
-    start_month: int | None = None,
-    end_month: int | None = None,
 ) -> pd.DataFrame:
     """
     Filter DataFrame to include only growing season data.
@@ -310,45 +330,40 @@ def filter_growing_season(
     ----------
     df:
         DataFrame with time series data
+    start_month:
+        First month of the growing season (1-12)
+    end_month:
+        Last month of the growing season (1-12), inclusive. If less than
+        ``start_month``, the season crosses the new year (e.g. 10 to 3 is
+        October to March).
     date_col:
         Column name containing dates
-    start_month:
-        Start month of growing season (1-12). Default: 2 (February)
-    end_month:
-        End month of growing season (1-12). Default: 6 (June)
 
     Returns
     -------
     pd.DataFrame
-        Filtered DataFrame with 'year' column added
+        Rows inside the season, with a ``year`` column. ``year`` is the
+        year in which the season *starts*, so October 2022 to March 2023
+        is labelled 2022. Empty if no rows fall inside the season.
     """
-    if start_month is None:
-        start_month = 2
-    if end_month is None:
-        end_month = 6
+    for name, month in (("start_month", start_month), ("end_month", end_month)):
+        if month not in range(1, 13):
+            raise ValueError(f"{name} must be 1-12, got {month}")
 
     df = df.copy()
-
     if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
         df[date_col] = pd.to_datetime(df[date_col])
 
-    start_year = df[date_col].dt.year.min()
-    end_year = df[date_col].dt.year.max()
+    month = df[date_col].dt.month
+    year = df[date_col].dt.year
+    if start_month <= end_month:
+        in_season = month.between(start_month, end_month)
+    else:
+        in_season = (month >= start_month) | (month <= end_month)
+        # Jan..end_month belong to the season that started the year before.
+        year = year - (month <= end_month)
 
-    seasons = []
-    for year in range(start_year, end_year + 1):
-        season_start = pd.Timestamp(f"{year}-{start_month:02d}-01")
-        season_end = pd.Timestamp(f"{year}-{end_month:02d}-28") + pd.offsets.MonthEnd(0)
-
-        season_data = df[
-            (df[date_col] >= season_start) & (df[date_col] <= season_end)
-        ].assign(year=year)
-
-        if len(season_data) > 0:
-            seasons.append(season_data)
-
-    if not seasons:
+    result = df[in_season].assign(year=year[in_season]).reset_index(drop=True)
+    if result.empty:
         logger.warning("No data found in growing season range")
-        return df.assign(year=df[date_col].dt.year)
-
-    return pd.concat(seasons, ignore_index=True)
+    return result
