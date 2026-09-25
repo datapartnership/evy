@@ -232,7 +232,7 @@ def zonal_stats(
         return _export(fc, filename, drive_folder)
     else:
         # Fetch without geometry and join in client-side if needed
-        df = fc_to_dataframe(fc, include_geometry=False)
+        df = fc_to_dataframe(fc)
         if include_geometry:
             df = _join_geometries(df, boundaries)
         return _to_output_contract(df, zone_col, stats, include_geometry)
