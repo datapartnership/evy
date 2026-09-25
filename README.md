@@ -31,10 +31,14 @@ Or using pip:
 pip install git+https://github.com/datapartnership/evy.git
 ```
 
-## Examples
+## Documentation
 
-For detailed examples, see the [notebooks/](notebooks/) directory:
-- [quickstart.ipynb](notebooks/quickstart.ipynb): Comprehensive walkthrough of main features
+- [Installation](docs/installation.md)
+- [Quickstart](notebooks/quickstart.ipynb)
+- [How-to recipes](notebooks/recipes/monthly-aggregation.ipynb)
+- [Concepts and methodology](docs/design-decisions.md)
+- [API reference](docs/api-reference.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ## Citation
 
