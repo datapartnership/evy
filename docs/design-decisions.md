@@ -6,17 +6,17 @@ This page documents the methodological choices baked into evy's defaults: which 
 
 The Enhanced Vegetation Index (EVI) uses three bands (blue, red, near-infrared) plus a soil-adjustment factor and two atmospheric-resistance coefficients, whereas NDVI uses only red and NIR. The practical consequence is that EVI is less prone to saturation over dense canopies and less sensitive to aerosol contamination over land. For agricultural and vegetation-health monitoring in cloudy or dusty regions, EVI gives a more faithful signal. NDVI is still a reasonable choice for historical comparisons or for sensors that lack a blue band, but evy does not expose NDVI as a primary output.
 
-*If you are citing this choice in a paper, the primary source is Huete et al. (2002), "Overview of the radiometric and biophysical performance of the MODIS vegetation indices."*
+*Primary source: [Huete et al. (2002), “Overview of the radiometric and biophysical performance of the MODIS vegetation indices”](https://doi.org/10.1016/S0034-4257(02)00096-2).*
 
 ## Which MODIS product
 
-evy's default MODIS product is **MOD13Q1**: 16-day composites from Terra at 250 m spatial resolution. Terra has been operational since February 2000, giving a ~25-year continuous record that spans longer than any alternative MODIS VI product. The companion product MYD13Q1 (Aqua, same cadence) is available from mid-2002 and can be substituted if you need observations from the afternoon overpass, but Terra is evy's default because of the record length.
+For the GEE backend, evy merges **MOD13Q1** (Terra) and **MYD13Q1** (Aqua): two 16-day, 250 m products offset to provide observations roughly every eight days after Aqua begins in July 2002. Before then, only Terra observations are available. The local Planetary Computer backend currently reads the `modis-13Q1-061` collection, so backend choice also determines whether Aqua observations are included.
 
-*Primary source: the MODIS MOD13 User Guide (Didan et al., current revision).*
+*Primary source: the [MOD13 User Guide](https://lpdaac.usgs.gov/documents/103/MOD13_User_Guide_V6.pdf).*
 
 ## Quality masking
 
-MOD13Q1 ships a per-pixel ``pixel_reliability`` band with four values: 0 (good data), 1 (marginal data), 2 (snow/ice), and 3 (cloudy). evy retains pixels with reliability 0 or 1 and masks the rest to NaN before any aggregation (see ``evy._process.apply_quality_mask``). This matches the "Rank 1" recommendation in the MOD13 user guide for typical land-monitoring workflows. If you need a stricter mask (e.g., only reliability 0), apply it downstream of evy's outputs.
+Quality masking differs with the data delivery path. The GEE backend retains good or marginal pixels according to both `SummaryQA` and the VI-quality bits in `DetailedQA`, and removes pixels carrying the snow/ice flag. The local backend uses the Planetary Computer `pixel_reliability` band and retains values 0 (good) and 1 (marginal), masking snow/ice and cloudy pixels. Masking happens before temporal and zonal aggregation.
 
 ## Cropland masking is on by default
 
@@ -27,15 +27,17 @@ When ``mask_cropland=True`` (the default), evy restricts the analysis to pixels 
 
 These two products do not always agree at the pixel level because they are derived from different sensors with different training data. For paper-ready methodology sections, state which backend was used and cite the corresponding source. If you are comparing results across backends, be aware that a portion of any difference will come from the mask rather than the EVI signal itself. Pass ``mask_cropland=False`` to disable the mask and aggregate over all pixels in the zone.
 
+*Primary sources: [Brown et al. (2022), Dynamic World](https://doi.org/10.1038/s41597-022-01307-4) and [ESA WorldCover](https://esa-worldcover.org/).*
+
 ## Monthly aggregation is the default frequency
 
-The default temporal frequency for ``zonal_stats`` is ``"ME"`` (month-end). This reflects two constraints. First, MOD13Q1 composites are already 16-day, so sub-monthly aggregation gives at most two data points per period — often one — and does not improve signal. Second, monthly totals align with most agricultural and food-security reporting cycles, making evy's outputs directly comparable to climate and yield statistics. Use ``freq="Original"`` when you need every source composite for phenology work, ``"QE"`` for quarterly summaries, and ``"YE"`` for annual means.
+The default temporal frequency for ``zonal_stats`` is monthly (`"ME"`). The output date is the first day of each calendar month despite the pandas-style alias. Monthly summaries align with common agricultural and food-security reporting cycles while smoothing the source composites into a regular series. The requested statistic controls the spatial summary; temporal aggregation uses the backend's monthly composite. Use ``freq="Original"`` when you need every source observation for phenology work, ``"QE"`` for quarterly summaries, and ``"YE"`` for annual summaries.
 
 ## TIMESAT-style phenology
 
 evy's phenology module implements a lightweight version of the TIMESAT preprocessing-and-extraction pipeline: outlier removal against a rolling median, Savitzky-Golay smoothing, and amplitude-threshold detection of the start, middle, and end of the growing season. The implementation is a Python port of the algorithmic ideas, not a bit-exact reproduction of the TIMESAT software. For papers that require strict TIMESAT reproducibility, use the original Fortran TIMESAT software and cite it directly.
 
-*Primary source: Jönsson & Eklundh (2004), "TIMESAT — a program for analyzing time-series of satellite sensor data."*
+*Primary source: [Jönsson & Eklundh (2004), “TIMESAT — a program for analyzing time-series of satellite sensor data”](https://doi.org/10.1016/j.compag.2004.05.006).*
 
 ## Coordinate reference system
 
