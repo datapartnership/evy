@@ -29,7 +29,7 @@ These two products do not always agree at the pixel level because they are deriv
 
 ## Monthly aggregation is the default frequency
 
-The default temporal frequency for ``zonal_stats`` is ``"ME"`` (month-end). This reflects two constraints. First, MOD13Q1 composites are already 16-day, so sub-monthly aggregation gives at most two data points per period — often one — and does not improve signal. Second, monthly totals align with most agricultural and food-security reporting cycles, making evy's outputs directly comparable to climate and yield statistics. Use ``freq="D"`` when you need daily interpolation for phenology work, ``"QE"`` for quarterly summaries, and ``"YE"`` for annual means.
+The default temporal frequency for ``zonal_stats`` is ``"ME"`` (month-end). This reflects two constraints. First, MOD13Q1 composites are already 16-day, so sub-monthly aggregation gives at most two data points per period — often one — and does not improve signal. Second, monthly totals align with most agricultural and food-security reporting cycles, making evy's outputs directly comparable to climate and yield statistics. Use ``freq="Original"`` when you need every source composite for phenology work, ``"QE"`` for quarterly summaries, and ``"YE"`` for annual means.
 
 ## TIMESAT-style phenology
 

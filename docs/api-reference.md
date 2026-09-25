@@ -83,9 +83,9 @@ These module-level constants are convenience aliases for common values. They are
 
 | Name | Value | Meaning |
 |---|---|---|
-| `evy.DAILY` | `"D"` | Daily frequency (pandas offset alias) |
-| `evy.WEEKLY` | `"W"` | Weekly frequency |
-| `evy.MONTHLY` | `"ME"` | Month-end frequency (default for `zonal_stats`) |
-| `evy.QUARTERLY` | `"QE"` | Quarter-end frequency |
-| `evy.YEARLY` | `"YE"` | Year-end frequency |
+| `evy.ORIGINAL` | `"Original"` | No aggregation; one row per source composite |
+| `evy.MONTHLY` | `"ME"` | Calendar months (default for `zonal_stats`); `date` is the first day of the month |
+| `evy.QUARTERLY` | `"QE"` | Calendar quarters; `date` is the first day of the quarter |
+| `evy.YEARLY` | `"YE"` | Calendar years; `date` is 1 January |
+| `evy.ANNUAL` | `"YE"` | Alias for `evy.YEARLY` |
 | `evy.CRS` | `"EPSG:4326"` | Default coordinate reference system for inputs and outputs |

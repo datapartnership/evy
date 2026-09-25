@@ -89,7 +89,7 @@ def plot_seasonality(
     --------
     >>> import evy
     >>> gdf = evy.get_boundaries('SYR', admin_level=1)
-    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='D')
+    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='Original')
     >>> phenology = evy.calculate_phenology(df)
     >>> chart = evy.plot_seasonality(phenology)
     >>> chart.display()  # or chart.save('seasonality.html')
@@ -204,7 +204,7 @@ def plot_seasonality_by_region(
     --------
     >>> import evy
     >>> gdf = evy.get_boundaries('SYR', admin_level=1)
-    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='D')
+    >>> df = evy.zonal_stats(gdf, zone_col='shapeName', freq='Original')
     >>> phenology = evy.calculate_phenology(df, group_col='shapeName')
     >>> chart = evy.plot_seasonality_by_region(phenology)
     >>> chart.display()

@@ -10,6 +10,8 @@ EVI_SCALE_FACTOR = 0.0001
 EVI_VALID_MIN = -0.2
 EVI_VALID_MAX = 1.0
 CROP_CLASSES = [40]
+# Resample to period *start* labels so dates match the GEE backend.
+_RESAMPLE_FREQ = {"ME": "MS", "QE": "QS", "YE": "YS"}
 
 
 def apply_quality_mask(ds: xr.Dataset) -> xr.DataArray:
@@ -33,11 +35,12 @@ def apply_quality_mask(ds: xr.Dataset) -> xr.DataArray:
 
 
 def scale_evi(evi: xr.DataArray) -> xr.DataArray:
-    """Apply MODIS scale factor and clip to valid physical range.
+    """Apply MODIS scale factor and mask values outside the valid range.
 
     Multiplies raw integer EVI values by ``EVI_SCALE_FACTOR`` (0.0001) and
-    clips the result to ``[EVI_VALID_MIN, EVI_VALID_MAX]`` ([-0.2, 1.0]).
-    NaN values are preserved.
+    sets values outside ``[EVI_VALID_MIN, EVI_VALID_MAX]`` ([-0.2, 1.0]) to
+    NaN. Out-of-range values are invalid data, so they are dropped rather
+    than clipped (clipping would pull zone means toward the bounds).
 
     Parameters
     ----------
@@ -47,10 +50,10 @@ def scale_evi(evi: xr.DataArray) -> xr.DataArray:
     Returns
     -------
     xr.DataArray
-        Scaled and clipped EVI values.
+        Scaled EVI values, NaN where out of range.
     """
     scaled = evi * EVI_SCALE_FACTOR
-    return scaled.clip(min=EVI_VALID_MIN, max=EVI_VALID_MAX)
+    return scaled.where((scaled >= EVI_VALID_MIN) & (scaled <= EVI_VALID_MAX))
 
 
 def apply_cropland_mask(evi: xr.DataArray, land_cover: xr.DataArray) -> xr.DataArray:
@@ -76,23 +79,31 @@ def apply_cropland_mask(evi: xr.DataArray, land_cover: xr.DataArray) -> xr.DataA
 
 
 def aggregate_temporal(evi: xr.DataArray, freq: str) -> xr.DataArray:
-    """Resample EVI to a coarser temporal frequency using the median.
+    """Resample EVI to calendar periods using the median.
 
     Parameters
     ----------
     evi : xr.DataArray
         EVI time series with a ``time`` dimension.
     freq : str
-        Pandas-compatible resample frequency string (e.g. ``"ME"`` for
-        month-end, ``"QE"`` for quarter-end, ``"YE"`` for year-end). Pass
+        ``"ME"`` (monthly), ``"QE"`` (quarterly), or ``"YE"`` (yearly). Pass
         ``"Original"`` to skip resampling and return ``evi`` unchanged.
 
     Returns
     -------
     xr.DataArray
-        Temporally aggregated EVI. When ``freq="Original"``, the input is
-        returned without modification.
+        Temporally aggregated EVI, with each time step labelled by the
+        *start* of its period (e.g. ``2023-01-01`` for January 2023).
+
+    Raises
+    ------
+    ValueError
+        If ``freq`` is not one of the supported values.
     """
     if freq == "Original":
         return evi
-    return evi.resample(time=freq).median()
+    if freq not in _RESAMPLE_FREQ:
+        raise ValueError(
+            f"Unknown freq: {freq!r}. Available: ['Original', 'ME', 'QE', 'YE']"
+        )
+    return evi.resample(time=_RESAMPLE_FREQ[freq]).median()

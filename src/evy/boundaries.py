@@ -1,20 +1,51 @@
 """Fetch and load administrative boundaries."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Union
 
 import geopandas as gpd
 import requests
+from platformdirs import user_cache_dir
 
 logger = logging.getLogger(__name__)
 
-CACHE_DIR = Path.cwd() / ".evy" / "boundaries"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+def _resolve_cache_dir() -> Path:
+    """Resolve the boundaries cache directory.
+
+    Honors the ``EVY_CACHE_DIR`` environment variable when set (useful for
+    tests and CI). Otherwise uses the platform-native user cache directory
+    (``~/Library/Caches/evy`` on macOS, ``~/.cache/evy`` on Linux).
+    """
+    override = os.environ.get("EVY_CACHE_DIR")
+    base = Path(override) if override else Path(user_cache_dir("evy"))
+    return base / "boundaries"
+
+
+CACHE_DIR = _resolve_cache_dir()
 _MEMORY_CACHE: dict[str, gpd.GeoDataFrame] = {}
 
 GEOBOUNDARIES_BASE_URL = "https://www.geoboundaries.org/api/current"
 CRS = "EPSG:4326"
+
+
+def _legacy_cache_dir() -> Path:
+    """Old cwd-based cache location used by evy before the platformdirs migration."""
+    return Path.cwd() / ".evy" / "boundaries"
+
+
+def _warn_legacy_cache_once():
+    """Emit a one-time warning if an old cwd-based cache is present."""
+    legacy = _legacy_cache_dir()
+    if legacy.exists() and any(legacy.glob("*.geojson")):
+        logger.warning(
+            "Found legacy boundaries cache at %s. evy now caches to %s; "
+            "you can safely delete the legacy directory.",
+            legacy,
+            CACHE_DIR,
+        )
 
 
 def get_boundaries(
@@ -68,7 +99,7 @@ def get_boundaries(
 
     if use_cache and cache_key in _MEMORY_CACHE:
         logger.debug(f"Loading boundaries from memory cache: {cache_key}")
-        return _MEMORY_CACHE[cache_key]
+        return _MEMORY_CACHE[cache_key].copy()
 
     cache_file = CACHE_DIR / f"{cache_key}.geojson"
 
@@ -76,7 +107,7 @@ def get_boundaries(
         logger.info(f"Loading boundaries from disk cache: {cache_file}")
         gdf = gpd.read_file(cache_file)
         _MEMORY_CACHE[cache_key] = gdf
-        return gdf
+        return gdf.copy()
 
     logger.info(f"Fetching {iso3} ADM{admin_level} from GeoBoundaries API")
 
@@ -106,11 +137,14 @@ def get_boundaries(
 
     gdf = _ensure_crs(gdf)
 
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _warn_legacy_cache_once()
     logger.info(f"Caching boundaries to: {cache_file}")
     gdf.to_file(cache_file, driver="GeoJSON")
     _MEMORY_CACHE[cache_key] = gdf
 
-    return gdf
+    # Return a copy so callers who add columns do not change the cached object.
+    return gdf.copy()
 
 
 def load_boundaries(path: Union[str, Path]) -> gpd.GeoDataFrame:
