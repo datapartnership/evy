@@ -100,7 +100,10 @@ def _extract_zonal(
     all_results = []
     for time_val in evi["time"].values:
         date = pd.to_datetime(time_val).date()
-        evi_slice = evi.sel(time=time_val)
+        # Compute the time step once. exactextract reads one window per zone,
+        # and on a lazy (Dask) array each read would repeat the downloads and
+        # the median; that made the cost grow with zones x time steps.
+        evi_slice = evi.sel(time=time_val).compute()
         result = exact_extract(
             evi_slice,
             boundaries,

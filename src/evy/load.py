@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 _PC_STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
 
+# Retry failed pixel reads (GDAL_HTTP_MAX_RETRY=10, 0.5 s delay) instead of
+# aborting the whole analysis on one flaky tile. Runs once at import, so a
+# later odc.stac.configure_rio() call by the user still takes precedence.
+odc_stac.configure_rio(cloud_defaults=True)
+
 
 class EmptyStacResultError(RuntimeError):
     """Raised when a STAC search returns zero items for the given query."""

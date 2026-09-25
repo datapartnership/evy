@@ -78,3 +78,24 @@ def test_zonal_stats_rejects_bad_args_before_any_work(small_boundaries, kwargs, 
     # Validation runs before GEE init or downloads, so no network is touched.
     with pytest.raises(error):
         zonal_stats(small_boundaries, zone_col="shapeName", **kwargs)
+
+
+def test_local_extracts_from_memory_not_lazy_dask(small_boundaries, monkeypatch):
+    """Each time step must be computed once before exactextract reads it.
+
+    exactextract reads one window per zone; on a lazy Dask array every read
+    repeats the downloads (a 30-zone query took over 51 min instead of 4 min).
+    """
+    import evy._zonal_local as zl
+
+    seen = []
+    original = zl.exact_extract
+
+    def spy(raster, *args, **kwargs):
+        seen.append(raster.chunks)
+        return original(raster, *args, **kwargs)
+
+    monkeypatch.setattr(zl, "exact_extract", spy)
+    ds = _synthetic_modis([5000, 3000, 6000]).chunk({"time": 1})
+    compute_zonal_stats(ds, small_boundaries, zone_col="shapeName")
+    assert seen and all(chunks is None for chunks in seen)
