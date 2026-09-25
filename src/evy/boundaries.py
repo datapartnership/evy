@@ -1,27 +1,20 @@
 """Fetch and load administrative boundaries."""
 
 import logging
-import os
 from pathlib import Path
 from typing import Union
 
 import geopandas as gpd
 import requests
-from platformdirs import user_cache_dir
+
+from evy.cache import _cache_base
 
 logger = logging.getLogger(__name__)
 
 
 def _resolve_cache_dir() -> Path:
-    """Resolve the boundaries cache directory.
-
-    Honors the ``EVY_CACHE_DIR`` environment variable when set (useful for
-    tests and CI). Otherwise uses the platform-native user cache directory
-    (``~/Library/Caches/evy`` on macOS, ``~/.cache/evy`` on Linux).
-    """
-    override = os.environ.get("EVY_CACHE_DIR")
-    base = Path(override) if override else Path(user_cache_dir("evy"))
-    return base / "boundaries"
+    """Resolve the boundaries cache directory."""
+    return _cache_base() / "boundaries"
 
 
 CACHE_DIR = _resolve_cache_dir()
@@ -257,8 +250,10 @@ def _gdf_to_ee_feature_collection(gdf: gpd.GeoDataFrame):
     # Simplify geometries to reduce computation graph size
     # This prevents "Request payload size exceeds 10MB" errors when boundaries
     # have high coordinate density (e.g., complex coastlines, detailed admin boundaries)
-    # Tolerance of 0.001 degrees ≈ 111m at equator - safe for MODIS (250m) and
-    # Sentinel-2 (10m) since zonal stats use pixel centroids, not exact polygon edges
+    # Tolerance of 0.001 degrees ≈ 111m at the equator: below one MODIS pixel
+    # (250m), so edge effects are small. For Sentinel-2 (10m) it can move
+    # boundary pixels in or out of a zone; that matters mainly for small zones.
+    # ponytail: fixed tolerance; make it depend on `scale` if S2 edge accuracy matters.
     simplified = gdf.copy()
     simplified["geometry"] = simplified.geometry.simplify(
         tolerance=0.001, preserve_topology=True

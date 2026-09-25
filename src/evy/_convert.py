@@ -119,8 +119,6 @@ def check_task_status(task_id: str) -> dict:
         - 'description': Task description
         - 'progress': Progress percentage (if available)
     """
-    import ee
-
     tasks = ee.batch.Task.list()
 
     for task in tasks:

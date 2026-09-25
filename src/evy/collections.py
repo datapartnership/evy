@@ -89,8 +89,6 @@ def _bitwise_extract(
     ee.Image
         Image with extracted bit values
     """
-    import ee
-
     to_bit = from_bit if to_bit is None else to_bit
     mask_size = ee.Number(1).add(to_bit).subtract(from_bit)
     mask = ee.Number(1).leftShift(mask_size).subtract(1)

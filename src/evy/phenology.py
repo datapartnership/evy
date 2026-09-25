@@ -6,12 +6,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 
-try:
-    from scipy.signal import savgol_filter
-
-    HAS_SCIPY = True
-except ImportError:
-    HAS_SCIPY = False
+from scipy.signal import savgol_filter
 
 logger = logging.getLogger(__name__)
 
@@ -57,21 +52,7 @@ def preprocess_series(
     -------
     np.ndarray
         Smoothed values as a float array, same length as the input series.
-
-    Raises
-    ------
-    ImportError
-        If ``scipy`` is not installed. ``scipy`` is a core dependency of
-        evy, so this error should not arise in normal installations, but
-        the check is retained for users who have installed evy into an
-        environment with stripped dependencies.
     """
-    if not HAS_SCIPY:
-        raise ImportError(
-            "scipy is required for phenology preprocessing. "
-            "Install it with: pip install scipy"
-        )
-
     series = series.copy()
 
     # Step 1

@@ -21,15 +21,20 @@ from platformdirs import user_cache_dir
 logger = logging.getLogger(__name__)
 
 
-def _resolve_cache_dir() -> Path:
-    """Resolve the zonal-stats cache directory.
+def _cache_base() -> Path:
+    """Root of all evy caches.
 
-    Honors the ``EVY_CACHE_DIR`` environment variable, otherwise falls back
-    to the platform user cache directory.
+    Honors the ``EVY_CACHE_DIR`` environment variable when set (useful for
+    tests and CI). Otherwise uses the platform-native user cache directory
+    (``~/Library/Caches/evy`` on macOS, ``~/.cache/evy`` on Linux).
     """
     override = os.environ.get("EVY_CACHE_DIR")
-    base = Path(override) if override else Path(user_cache_dir("evy"))
-    return base / "zonal"
+    return Path(override) if override else Path(user_cache_dir("evy"))
+
+
+def _resolve_cache_dir() -> Path:
+    """Resolve the zonal-stats cache directory."""
+    return _cache_base() / "zonal"
 
 
 def _hash_boundaries(boundaries: gpd.GeoDataFrame, zone_col: str) -> str:
