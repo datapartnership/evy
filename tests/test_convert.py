@@ -25,3 +25,11 @@ def test_fc_to_dataframe_empty_result_keeps_date_column():
     with patch("evy._convert.ee.data.computeFeatures", return_value=pd.DataFrame()):
         df = fc_to_dataframe("fake-fc")
     assert list(df.columns) == ["date"]
+
+
+def test_export_to_drive_passes_selectors():
+    from evy._convert import export_to_drive
+
+    with patch("evy._convert.ee.batch.Export.table.toDrive") as mock_to_drive:
+        export_to_drive("fake-fc", "name", selectors=["date", "shapeName", "mean"])
+    assert mock_to_drive.call_args.kwargs["selectors"] == ["date", "shapeName", "mean"]

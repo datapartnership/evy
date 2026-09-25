@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 STATS = ("mean", "median", "min", "max", "std", "sum", "count")
 FREQS = ("Original", "ME", "QE", "YE")
 _GEE_KWARGS = {"scale", "export_to_drive", "drive_folder", "project"}
+# evy stat name -> GEE reducer output name (only where they differ).
+_GEE_STAT_NAMES = {"std": "stdDev"}
 # pandas period alias and length in months, for calendar-aligned GEE composites.
 _GEE_PERIODS = {"ME": ("M", 1), "QE": ("Q", 3), "YE": ("Y", 12)}
 
@@ -229,7 +231,12 @@ def zonal_stats(
         filename = _generate_export_filename(source, start_date, end_date)
         from evy._convert import export_to_drive as _export
 
-        return _export(fc, filename, drive_folder)
+        # Apply the output contract server-side, so the file on Drive has the
+        # same columns as the returned DataFrame.
+        cols = ["date", zone_col, *stats]
+        gee_cols = [_GEE_STAT_NAMES.get(c, c) for c in cols]
+        fc = fc.select(gee_cols, cols, False)
+        return _export(fc, filename, drive_folder, selectors=cols)
     else:
         # Fetch without geometry and join in client-side if needed
         df = fc_to_dataframe(fc)
@@ -246,7 +253,7 @@ def _to_output_contract(
     GEE names the standard deviation ``stdDev`` and passes every boundary
     attribute through; both are normalized here to match the local backend.
     """
-    df = df.rename(columns={"stdDev": "std"})
+    df = df.rename(columns={v: k for k, v in _GEE_STAT_NAMES.items()})
     cols = ["date", zone_col, *stats] + (["geometry"] if include_geometry else [])
     return df.reindex(columns=cols)
 

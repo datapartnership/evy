@@ -61,6 +61,7 @@ def export_to_drive(
     filename: str,
     folder: str = "evy_exports",
     file_format: str = "CSV",
+    selectors: list[str] | None = None,
 ) -> str:
     """
     Export FeatureCollection to Google Drive.
@@ -75,19 +76,21 @@ def export_to_drive(
         Google Drive folder name
     file_format:
         Export format ('CSV', 'GeoJSON', 'KML', etc.)
+    selectors:
+        Columns to write, in order. Without it, GEE also writes its
+        internal ``system:index`` and ``.geo`` columns.
 
     Returns
     -------
     str
         Task ID for the export task
     """
-    import ee
-
     task = ee.batch.Export.table.toDrive(
         collection=fc,
         description=filename,
         folder=folder,
         fileFormat=file_format,
+        selectors=selectors,
     )
     task.start()
 
