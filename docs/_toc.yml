@@ -7,19 +7,22 @@ parts:
       - file: docs/installation
       - file: notebooks/quickstart
 
-  - caption: Cookbook
+  - caption: How-to Guides
     chapters:
       - file: notebooks/recipes/monthly-aggregation
       - file: notebooks/recipes/cropland-masking
       - file: notebooks/recipes/multi-country-comparison
       - file: notebooks/recipes/phenology-extraction
       - file: notebooks/recipes/local-backend
+      - file: docs/troubleshooting
+
+  - caption: Concepts & Methods
+    chapters:
+      - file: docs/design-decisions
 
   - caption: Reference
     chapters:
       - file: docs/api-reference
-      - file: docs/design-decisions
-      - file: docs/troubleshooting
 
   - caption: About
     chapters:
