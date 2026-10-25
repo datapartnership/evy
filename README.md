@@ -65,4 +65,6 @@ and annual cropland masking. Esri/Impact Observatory land cover supports
 2017–2025; WorldCover remains the default. Use `mask_cropland=False` for
 unmasked EVI. Exports cover the boundary bounding box and preserve the MODIS
 grid. Native 10 m land-cover exports are described in the
-[API reference](docs/api-reference.md#raster-loading-and-geotiff-export).
+[API reference](docs/api-reference.md).
+
+For a complete runnable example, see the [GeoTIFF export recipe](notebooks/recipes/geotiff-export.ipynb).

@@ -41,5 +41,5 @@ repos:
     rev: 0.9.1
     hooks:
       - id: nbstripout
-        exclude: ^notebooks/quickstart\.ipynb$
+        exclude: ^notebooks/(quickstart|recipes/geotiff-export)\.ipynb$
         args: [--extra-keys, metadata.kernelspec]

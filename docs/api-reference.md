@@ -65,7 +65,10 @@ The GEE backend uses Dynamic World for cropland masking. The local backend defau
 ```{autodoc2-object} evy._zonal_local.compute_zonal_stats
 ```
 
+(raster-loading-and-geotiff-export)=
 ## Raster loading and GeoTIFF export
+
+See the [runnable GeoTIFF export recipe](../notebooks/recipes/geotiff-export.ipynb) for EVI, land-cover, and binary crop-mask examples.
 
 Raster output uses the local backend without GEE authentication. No zonal
 aggregation is performed by `load_evi` or `export_geotiff`.
