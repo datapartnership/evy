@@ -75,12 +75,9 @@ source = "uv-dynamic-versioning"
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
-[tool.uv.sources]
-attaviz = { git = "https://github.com/datapartnership/attaviz.git" }
-
 [dependency-groups]
 dev = [
-    "attaviz",  # chart theme used in the notebooks only
+    "attaviz>=0.1.0",  # chart theme used in the notebooks only
     "ipykernel>=7.1.0",
     "ipython>=9.9.0",
     "jupyter>=1.1.1",

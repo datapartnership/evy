@@ -60,3 +60,5 @@ Run this in Python. If it prints a table of collections without errors, you're s
 import evy
 evy.list_collections()
 ```
+
+The documentation site shows notebook source without executing remote-data calls. To reproduce tables and charts, run the notebooks locally after configuring the backend you plan to use.

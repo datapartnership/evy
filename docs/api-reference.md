@@ -4,6 +4,19 @@ This page documents evy's public API — the functions and constants exported fr
 
 Symbols beginning with `_` are internal and not part of the public contract. They are intentionally excluded from this reference.
 
+## Backend support
+
+| Backend | Sources | Authentication | Large jobs |
+|---|---|---|---|
+| `"gee"` | MODIS, Sentinel-2 | Google Earth Engine | `export_to_drive=True` |
+| `"local"` | MODIS | None with Planetary Computer | Split large regions or date ranges |
+
+The GEE backend uses Dynamic World for cropland masking. The local backend uses ESA WorldCover, so masked results are not expected to match pixel-for-pixel.
+
+## Output contract
+
+`zonal_stats` and `cached_zonal_stats` return `date`, the requested `zone_col`, and one column per requested statistic. `date` is the observation date for `"Original"` or the first day of an aggregated calendar period. When `include_geometry=True`, the result is a GeoDataFrame with geometry in the input boundaries' CRS.
+
 ## Boundaries
 
 ```{autodoc2-object} evy.boundaries.get_boundaries
@@ -34,10 +47,19 @@ Symbols beginning with `_` are internal and not part of the public contract. The
 ```{autodoc2-object} evy.zonal.zonal_stats
 ```
 
+```{autodoc2-object} evy.cache.cached_zonal_stats
+```
+
+```{autodoc2-object} evy.cache.clear_zonal_cache
+```
+
 ```{autodoc2-object} evy.load.load_modis
 ```
 
 ```{autodoc2-object} evy.load.load_landcover
+```
+
+```{autodoc2-object} evy.load.EmptyStacResultError
 ```
 
 ```{autodoc2-object} evy._zonal_local.compute_zonal_stats

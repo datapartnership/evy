@@ -371,12 +371,17 @@ wheels = [
 [[package]]
 name = "attaviz"
 version = "0.1.0"
-source = { git = "https://github.com/datapartnership/attaviz.git#5356e31b67cf6cad7c1fb63b262846208b0da3a3" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "altair" },
+    { name = "pandas" },
     { name = "pyarrow" },
     { name = "vegafusion" },
     { name = "vl-convert-python" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a1/64/9cbc34b8cc06edd7a7a68ca9c9ae8423416fa5073107c983fd8c07d69c2d/attaviz-0.1.0.tar.gz", hash = "sha256:b4e1c60ce9770555f813f5e8382963f63e25e96cd383ffc7976da5d94f54d871", size = 34818, upload-time = "2026-09-25T10:09:22.288Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8b/0e/ce2c577338a67460218fe378465b70963de71930c707f59d2aa11538d6ff/attaviz-0.1.0-py3-none-any.whl", hash = "sha256:e438a7c8a4b5d960572e467a739489e52ac59d32d432bbc2632ea07cce1b16b8", size = 33124, upload-time = "2026-09-25T10:09:21.158Z" },
 ]
 
 [[package]]
@@ -965,7 +970,7 @@ provides-extras = ["docs", "test"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "attaviz", git = "https://github.com/datapartnership/attaviz.git" },
+    { name = "attaviz", specifier = ">=0.1.0" },
     { name = "ipykernel", specifier = ">=7.1.0" },
     { name = "ipython", specifier = ">=9.9.0" },
     { name = "jupyter", specifier = ">=1.1.1" },

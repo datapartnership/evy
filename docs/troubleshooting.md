@@ -105,6 +105,22 @@ Or manually delete `~/.evy/boundaries/` from your filesystem.
 
 ---
 
+## Stale cached zonal statistics
+
+**Symptom:** `cached_zonal_stats` returns an older result after upstream data or code has changed.
+
+**Cause:** Results are cached by input parameters and boundary content. The cache cannot detect changes in remote datasets or evy's implementation.
+
+**Fix:** Clear the zonal-statistics cache and run the request again:
+
+```python
+evy.clear_zonal_cache()
+```
+
+Pass `cache_dir=` to either function if you use a custom cache location.
+
+---
+
 ## "No boundaries found for <ISO3> ADM<N>"
 
 **Symptom:** `get_boundaries` raises `ValueError: No boundaries found for XYZ ADM2. Check ISO3 code and admin level.`
