@@ -10,7 +10,13 @@ The Enhanced Vegetation Index (EVI) uses three bands (blue, red, near-infrared) 
 
 ## Which MODIS product
 
-For the GEE backend, evy merges **MOD13Q1** (Terra) and **MYD13Q1** (Aqua): two 16-day, 250 m products offset to provide observations roughly every eight days after Aqua begins in July 2002. Before then, only Terra observations are available. The local Planetary Computer backend currently reads the `modis-13Q1-061` collection, so backend choice also determines whether Aqua observations are included.
+evy uses **MOD13Q1** (Terra) and **MYD13Q1** (Aqua): two 16-day, 250 m products offset to provide observations roughly every eight days after Aqua begins in July 2002. Before then, only Terra observations are available. GEE merges both collections; the local Planetary Computer provider reads the combined `modis-13Q1-061` collection, and `provider="earthdata"` searches both NASA products directly.
+
+The NASA loader reads native sinusoidal grid metadata and retains all pixels
+intersecting the projected boundary bounding box. Providers can select different
+outermost rows or columns, so pixel comparisons should use identical grid cells
+and masks. NASA's native HDF4 fill values are converted to NaN before evy's
+shared quality filtering and scaling.
 
 *Primary source: the [MOD13 User Guide](https://lpdaac.usgs.gov/documents/103/MOD13_User_Guide_V6.pdf).*
 

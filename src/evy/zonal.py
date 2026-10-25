@@ -79,6 +79,7 @@ def zonal_stats(
     include_geometry: bool = False,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
+    provider: str = "planetary_computer",
     scale: int | None = None,
     export_to_drive: bool = False,
     drive_folder: str | None = None,
@@ -100,7 +101,7 @@ def zonal_stats(
     backend:
         Computation backend:
         - 'gee': Google Earth Engine (server-side, requires authentication)
-        - 'local': Local computation via Planetary Computer STAC (no auth needed)
+        - 'local': Local computation via Planetary Computer (no auth) or NASA Earthdata
     source:
         Satellite data source:
         - 'modis': MODIS Terra + Aqua (250m, 16-day, from 2000)
@@ -136,6 +137,10 @@ def zonal_stats(
     landcover_source:
         Local only: 'worldcover' (default, static class 40) or 'esri'
         (annual 2017–2025 maps, class 5). GEE always uses Dynamic World.
+    provider:
+        Local MODIS provider: 'planetary_computer' (default) or 'earthdata'.
+        Earthdata requires ``evy[earthdata]`` and Earthdata Login credentials.
+        Land cover still comes from Planetary Computer.
     scale:
         GEE only. Resolution in meters. Default depends on source:
         - MODIS: 250m (native resolution)
@@ -174,6 +179,11 @@ def zonal_stats(
             f"Available columns: {list(boundaries.columns)}"
         )
 
+    from evy.load import _validate_provider
+
+    _validate_provider(provider)
+    if backend == "gee" and provider != "planetary_computer":
+        raise ValueError("provider='earthdata' requires backend='local'")
     if landcover_source not in ("worldcover", "esri"):
         raise ValueError("landcover_source must be 'worldcover' or 'esri'")
     if backend == "gee" and landcover_source != "worldcover":
@@ -205,6 +215,7 @@ def zonal_stats(
             include_geometry=include_geometry,
             mask_cropland=mask_cropland,
             landcover_source=landcover_source,
+            provider=provider,
         )
 
     _ensure_initialized(project)

@@ -68,9 +68,12 @@ def _stac_search(collections: list[str], bbox, datetime_range: str | None = None
     return list(search.items())
 
 
-def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
+def load_modis(
+    boundaries: gpd.GeoDataFrame, start_date: str, end_date: str,
+    *, provider: str = "planetary_computer",
+):
     """
-    Load MODIS EVI and quality bands from a STAC catalog.
+    Load MODIS EVI and quality bands from Planetary Computer or NASA Earthdata.
 
     Searches the Microsoft Planetary Computer STAC endpoint for MOD13Q1 and
     MYD13Q1 (MODIS Terra and Aqua 16-day, 250m) items intersecting the boundary bounding
@@ -87,6 +90,11 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
         Inclusive start date as an ISO string (YYYY-MM-DD).
     end_date : str
         Inclusive end date as an ISO string (YYYY-MM-DD).
+    provider : str
+        'planetary_computer' (default) or 'earthdata' (NASA directly).
+        Earthdata requires ``evy[earthdata]`` and Earthdata Login credentials.
+        HDF files are downloaded to ``EVY_CACHE_DIR/earthdata`` (or the
+        platform evy cache), then cropped pixels are read lazily with pyhdf.
 
     Returns
     -------
@@ -97,8 +105,9 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
         - ``evi_raw`` : int16 EVI values (scaled ×10000 per MODIS convention)
         - ``qa`` : pixel reliability (0=good, 1=marginal, 2=snow/ice, 3=cloudy)
 
-        Both are indexed by ``(time, y, x)`` with chunks of ``{x: 2048,
-        y: 2048, time: 1}``.
+        Both are indexed by ``(time, y, x)``. Planetary Computer uses chunks
+        of ``{x: 2048, y: 2048, time: 1}``; NASA uses one cropped tile window
+        per chunk. NASA fill values are converted to NaN without scaling.
 
     Raises
     ------
@@ -106,6 +115,10 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
         If the STAC catalog returns zero items for the requested bbox and
         date range. The message includes the bbox, dates, and collection
         name so the caller can diagnose the query.
+    ValueError
+        For an unknown provider, or no matching NASA composites.
+    RuntimeError
+        If NASA authentication fails or a download is incomplete.
 
     Examples
     --------
@@ -115,6 +128,12 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
     >>> ds.evi_raw.sizes
     {'time': 23, 'y': ..., 'x': ...}
     """
+    _validate_provider(provider)
+    if provider == "earthdata":
+        from evy._earthdata import load_modis_earthdata
+
+        return load_modis_earthdata(boundaries, start_date, end_date)
+
     bbox = boundaries.to_crs(4326).total_bounds
     datetime_range = f"{start_date}/{end_date}"
     collection = "modis-13Q1-061"
@@ -254,6 +273,9 @@ def load_landcover(
             **grid,
         )["map"].isel(time=0, drop=True)
         crop_class = 40
+    if ds_evi is not None:
+        # `like` resamples to this grid; keep exact labels for xarray masks.
+        lc = lc.assign_coords(x=ds_evi.x, y=ds_evi.y)
     lc = lc.rename("landcover")
     lc.attrs.update(crop_class=crop_class, landcover_source=source)
     return lc
@@ -291,6 +313,11 @@ def _esri_footprints(bbox):
             return features
 
 
+def _validate_provider(provider: str) -> None:
+    if provider not in ("planetary_computer", "earthdata"):
+        raise ValueError("provider must be 'planetary_computer' or 'earthdata'")
+
+
 def load_evi(
     boundaries: gpd.GeoDataFrame,
     start_date: str,
@@ -298,18 +325,21 @@ def load_evi(
     *,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
+    provider: str = "planetary_computer",
 ) -> xr.DataArray:
     """Load scaled, quality-filtered MODIS EVI pixels without aggregation.
 
     Returns lazy ``(time, y, x)`` data at MODIS resolution over the boundary
     bounding box. Optionally mask cropland with WorldCover or annual Esri
     maps. Use :func:`evy.export_geotiff` to save one raster per observation.
+    ``provider`` selects 'planetary_computer' (default) or direct NASA
+    'earthdata'; land cover still comes from Planetary Computer.
     """
     from evy._process import prepare_evi
 
     if landcover_source not in ("worldcover", "esri"):
         raise ValueError("landcover_source must be 'worldcover' or 'esri'")
-    ds = load_modis(boundaries, start_date, end_date)
+    ds = load_modis(boundaries, start_date, end_date, provider=provider)
     lc = (
         load_landcover(boundaries, ds, source=landcover_source)
         if mask_cropland

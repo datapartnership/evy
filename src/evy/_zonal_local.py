@@ -199,6 +199,7 @@ def _zonal_stats_local(
     include_geometry: bool = False,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
+    provider: str = "planetary_computer",
 ) -> "pd.DataFrame | gpd.GeoDataFrame":
     """Internal orchestrator for local-backend zonal statistics.
 
@@ -224,14 +225,16 @@ def _zonal_stats_local(
         When ``True``, load land cover and restrict statistics to cropland.
     landcover_source : str
         "worldcover" (static, default) or "esri" (annual 2017–2025).
+    provider : str
+        "planetary_computer" (default) or "earthdata".
 
     Returns
     -------
     pd.DataFrame or gpd.GeoDataFrame
         Zonal statistics in the evy output contract (see :func:`evy.zonal_stats`).
     """
-    logger.info("Loading MODIS EVI data from Planetary Computer...")
-    ds_evi = load_modis(boundaries, start_date, end_date)
+    logger.info("Loading MODIS EVI data from %s...", provider)
+    ds_evi = load_modis(boundaries, start_date, end_date, provider=provider)
 
     land_cover = None
     if mask_cropland:

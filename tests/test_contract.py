@@ -72,6 +72,8 @@ def test_gee_output_contract_renames_and_drops_extras():
         ({"backend": "Local"}, ValueError),
         ({"scael": 100}, TypeError),
         ({"backend": "local", "scale": 100}, ValueError),
+        ({"provider": "earthdata"}, ValueError),
+        ({"backend": "local", "provider": "unknown"}, ValueError),
     ],
 )
 def test_zonal_stats_rejects_bad_args_before_any_work(small_boundaries, kwargs, error):
