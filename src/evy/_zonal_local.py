@@ -9,10 +9,8 @@ import xarray as xr
 from exactextract import exact_extract
 
 from evy._process import (
-    apply_cropland_mask,
-    apply_quality_mask,
+    prepare_evi,
     aggregate_temporal,
-    scale_evi,
 )
 from evy.load import load_landcover, load_modis
 
@@ -150,8 +148,8 @@ def compute_zonal_stats(
     """Compute EVI zonal statistics from a local dataset.
 
     This is the public entry point for local zonal statistics.  It runs the
-    full processing pipeline: quality masking → scaling → temporal aggregation
-    → optional cropland masking → zonal extraction → output normalization.
+    full processing pipeline: quality masking → scaling → optional cropland masking
+    → temporal aggregation → zonal extraction → output normalization.
 
     Parameters
     ----------
@@ -182,16 +180,8 @@ def compute_zonal_stats(
         ``std``, ...), and optionally ``geometry``.
     """
     stats = [stats] if isinstance(stats, str) else list(stats)
-    logger.info("Applying quality mask and scaling to EVI data...")
-    evi = apply_quality_mask(ds_evi)
-    evi = scale_evi(evi)
-
-    logger.info(f"Aggregating EVI to {freq} frequency using median...")
+    evi = prepare_evi(ds_evi, land_cover)
     evi = aggregate_temporal(evi, freq)
-
-    if land_cover is not None:
-        logger.info("Applying cropland mask...")
-        evi = apply_cropland_mask(evi, land_cover)
 
     logger.info("Extracting zonal statistics...")
     df = _extract_zonal(evi, boundaries, stats, zone_col)
@@ -208,6 +198,7 @@ def _zonal_stats_local(
     stats: "str | list[str]" = "mean",
     include_geometry: bool = False,
     mask_cropland: bool = True,
+    landcover_source: str = "worldcover",
 ) -> "pd.DataFrame | gpd.GeoDataFrame":
     """Internal orchestrator for local-backend zonal statistics.
 
@@ -230,8 +221,9 @@ def _zonal_stats_local(
     include_geometry : bool
         When ``True``, attach zone geometries to the output.
     mask_cropland : bool
-        When ``True``, load ESA WorldCover land cover and restrict statistics
-        to cropland pixels only.
+        When ``True``, load land cover and restrict statistics to cropland.
+    landcover_source : str
+        "worldcover" (static, default) or "esri" (annual 2017–2025).
 
     Returns
     -------
@@ -244,7 +236,7 @@ def _zonal_stats_local(
     land_cover = None
     if mask_cropland:
         logger.info("Loading land cover data for cropland masking...")
-        land_cover = load_landcover(boundaries, ds_evi)
+        land_cover = load_landcover(boundaries, ds_evi, source=landcover_source)
 
     logger.info("Computing zonal statistics...")
     return compute_zonal_stats(

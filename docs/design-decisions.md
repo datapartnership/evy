@@ -23,9 +23,10 @@ Quality masking differs with the data delivery path. The GEE backend retains goo
 When ``mask_cropland=True`` (the default), evy restricts the analysis to pixels classified as cropland. The source of the cropland mask depends on the backend:
 
 - **GEE backend:** Dynamic World (Brown et al., 2022), class 4 (crops).
-- **Local backend:** ESA WorldCover v200, class 40 (cropland).
+- **Local backend (default):** ESA WorldCover, class 40 (cropland).
+- **Local backend (`landcover_source="esri"`):** Esri/Impact Observatory v003 annual maps, 2017–2025, class 5 (crops). Each observation uses its year's mask before temporal aggregation.
 
-These two products do not always agree at the pixel level because they are derived from different sensors with different training data. For paper-ready methodology sections, state which backend was used and cite the corresponding source. If you are comparing results across backends, be aware that a portion of any difference will come from the mask rather than the EVI signal itself. Pass ``mask_cropland=False`` to disable the mask and aggregate over all pixels in the zone.
+These products do not always agree at the pixel level because they are derived from different sensors with different training data. For paper-ready methodology sections, state which backend was used and cite the corresponding source. If you are comparing results across backends, be aware that a portion of any difference will come from the mask rather than the EVI signal itself. Pass ``mask_cropland=False`` to disable the mask and aggregate over all pixels in the zone.
 
 *Primary sources: [Brown et al. (2022), Dynamic World](https://doi.org/10.1038/s41597-022-01307-4) and [ESA WorldCover](https://esa-worldcover.org/).*
 
