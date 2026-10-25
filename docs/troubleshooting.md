@@ -57,9 +57,9 @@ evy.check_task_status(task_id)
 
 ## "not recognized as a supported file format" (local backend, macOS)
 
-**Symptom:** When using the `earthaccess` local backend on macOS, `rasterio.errors.RasterioIOError: '...hdf' not recognized as a supported file format` on MODIS HDF4 files.
+**Symptom:** Opening a NASA MODIS HDF4 file directly with rasterio fails with `rasterio.errors.RasterioIOError: '...hdf' not recognized as a supported file format`.
 
-**Cause:** pip-installed `rasterio` / GDAL on macOS does not include the HDF4 driver. Homebrew GDAL also lacks HDF4 support, and `pyhdf` fails to build on recent Python versions.
+**Cause:** Many rasterio/GDAL distributions do not include an HDF4 driver.
 
 **Fix:** Use the default Planetary Computer backend, which serves Cloud-Optimized GeoTIFFs instead of HDF4:
 
@@ -67,13 +67,20 @@ evy.check_task_status(task_id)
 evy.zonal_stats(..., backend="local", source="modis")
 ```
 
-If you specifically need the NASA Earthdata path, evy's `earthaccess` backend streams MODIS bands via OPeNDAP (NetCDF4) rather than downloading HDF4, which sidesteps the driver problem entirely. Use it only if Planetary Computer does not host the data you need.
+For direct NASA access, install `evy[earthdata]` and use
+`evy.load_modis(..., provider="earthdata")` or
+`evy.zonal_stats(..., backend="local", provider="earthdata")`.
+This reads downloaded HDF4 files with `pyhdf` independently of GDAL's drivers.
+If a pyhdf wheel is unavailable on your platform, follow the
+[pyhdf installation instructions](https://fhs.github.io/pyhdf/install.html).
+The MODIS OPeNDAP route mentioned in older evy documentation was
+[retired by NASA](https://www.earthdata.nasa.gov/data/alerts-outages/modis-version-6-1-opendap-access-lp-daac-retired).
 
 ---
 
 ## `earthaccess` login prompts repeatedly
 
-**Symptom:** Every Python session asks for NASA Earthdata credentials again.
+**Symptom:** Direct NASA access reports a login failure or a manual login prompts repeatedly.
 
 **Cause:** Credentials are not persisted to `~/.netrc`.
 
@@ -84,7 +91,8 @@ import earthaccess
 earthaccess.login(persist=True)
 ```
 
-Subsequent `evy` calls that use the `earthaccess` backend will pick up the persisted credentials automatically.
+Subsequent `evy` calls with `provider="earthdata"` use the persisted credentials
+without prompting. Environment credentials take precedence over `.netrc`.
 
 ---
 

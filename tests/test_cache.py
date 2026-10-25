@@ -244,3 +244,15 @@ def test_cache_separates_landcover_sources(tmp_path, small_boundaries, fake_zona
             )
     assert zs.call_count == 2
     assert zs.call_args.kwargs["landcover_source"] == "esri"
+
+
+def test_cache_separates_modis_providers(tmp_path, small_boundaries, fake_zonal_df):
+    with patch("evy.zonal.zonal_stats", return_value=fake_zonal_df) as zs:
+        for provider in ("planetary_computer", "earthdata", "earthdata"):
+            cached_zonal_stats(
+                small_boundaries, zone_col="shapeName", backend="local",
+                provider=provider, start_date="2023-01-01", end_date="2023-01-31",
+                cache_dir=tmp_path,
+            )
+    assert zs.call_count == 2
+    assert zs.call_args.kwargs["provider"] == "earthdata"

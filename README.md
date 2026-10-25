@@ -68,3 +68,43 @@ grid. Native 10 m land-cover exports are described in the
 [API reference](docs/api-reference.md).
 
 For a complete runnable example, see the [GeoTIFF export recipe](notebooks/recipes/geotiff-export.ipynb).
+
+### Direct NASA Earthdata access
+
+Install the optional readers with `pip install 'evy[earthdata]'`. For a source
+checkout, use `uv sync --extra earthdata`.
+
+Configure your free [Earthdata Login](https://urs.earthdata.nasa.gov/) once:
+
+```python
+import earthaccess
+earthaccess.login(persist=True)
+```
+
+Then select NASA as the MODIS provider:
+
+```python
+evi = evy.load_evi(
+    boundaries, "2023-01-01", "2023-01-31",
+    provider="earthdata", mask_cropland=False,
+)
+evy.export_geotiff(evi, "output/nasa-evi")
+
+df = evy.zonal_stats(
+    boundaries, zone_col="shapeName", backend="local", provider="earthdata",
+    start_date="2023-01-01", end_date="2023-01-31", mask_cropland=False,
+)
+```
+
+`provider="earthdata"` also works with `load_modis` and `cached_zonal_stats`.
+It fetches NASA MOD13Q1 and MYD13Q1 v061 HDF files directly, then uses evy's
+existing quality masking and scaling. Full tiles are downloaded before lazy,
+cropped pixel reads; allow several hundred MB per tile and observation. Completed
+downloads are reused under the platform evy cache's `earthdata` directory, or
+`$EVY_CACHE_DIR/earthdata`. Delete that directory to reclaim disk space after
+finishing any lazy computations. `clear_zonal_cache` only clears statistics.
+
+Library calls use configured credentials without prompting. Environment
+credentials (`EARTHDATA_TOKEN`, or `EARTHDATA_USERNAME` and `EARTHDATA_PASSWORD`)
+take precedence over `.netrc`. Cropland masking, when enabled, still fetches
+land cover from Planetary Computer.

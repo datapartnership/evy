@@ -9,9 +9,16 @@ Symbols beginning with `_` are internal and not part of the public contract. The
 | Backend | Sources | Authentication | Large jobs |
 |---|---|---|---|
 | `"gee"` | MODIS, Sentinel-2 | Google Earth Engine | `export_to_drive=True` |
-| `"local"` | MODIS | None with Planetary Computer | Split large regions or date ranges |
+| `"local"` | MODIS | None with Planetary Computer; Earthdata Login with `provider="earthdata"` | Split large regions or date ranges |
 
 The GEE backend uses Dynamic World for cropland masking. The local backend defaults to ESA WorldCover and also supports annual Esri/Impact Observatory maps with `landcover_source="esri"`, so masked results are not expected to match pixel-for-pixel.
+
+For direct NASA MODIS access, install `evy[earthdata]`, configure Earthdata
+credentials, and pass `provider="earthdata"` to `load_modis`, `load_evi`,
+`zonal_stats` (with `backend="local"`), or `cached_zonal_stats`. The default
+provider remains `"planetary_computer"`. Provider selection is included in
+statistics cache keys. See the [NASA access example](../README.md#direct-nasa-earthdata-access)
+for authentication, disk cache behavior, and download size considerations.
 
 ## Output contract
 

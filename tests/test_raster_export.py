@@ -156,3 +156,26 @@ def test_load_evi_returns_pixels_with_selected_mask(small_boundaries):
     assert load_lc.call_args.kwargs["source"] == "esri"
     assert data.dims == ("time", "y", "x")
     np.testing.assert_allclose(data.values, [[[0.5, np.nan], [np.nan, 0.5]]])
+
+
+@pytest.mark.parametrize("source,crop", [("worldcover", 40), ("esri", 5)])
+def test_landcover_retains_exact_target_coordinates(small_boundaries, source, crop):
+    raw = raster(np.full((1, 2, 2), 5000), time=pd.to_datetime(["2023-01-01"]))
+    ds = xr.Dataset({"evi_raw": raw, "qa": xr.zeros_like(raw)})
+    layer = raster([[[crop, 2], [crop, crop]]], time=raw.time.values)
+    layer = layer.assign_coords(x=layer.x + 1e-8, y=layer.y - 1e-8)
+    feature = {
+        "properties": {"ImageName": "37M"},
+        "geometry": small_boundaries.geometry.iloc[0].__geo_interface__,
+    }
+    with (
+        patch("evy.load._stac_search", return_value=[object()]),
+        patch("evy.load._esri_footprints", return_value=[feature]),
+        patch("evy.load.odc_stac.load", return_value=layer.to_dataset(name="map" if source == "worldcover" else "data")),
+    ):
+        lc = evy.load_landcover(small_boundaries, ds, source=source)
+    np.testing.assert_array_equal(lc.x, ds.x)
+    np.testing.assert_array_equal(lc.y, ds.y)
+    result = prepare_evi(ds, lc)
+    assert result.sizes == raw.sizes
+    np.testing.assert_allclose(result, [[[0.5, np.nan], [0.5, 0.5]]])
