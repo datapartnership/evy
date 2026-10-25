@@ -59,8 +59,9 @@ def scale_evi(evi: xr.DataArray) -> xr.DataArray:
 def apply_cropland_mask(evi: xr.DataArray, land_cover: xr.DataArray) -> xr.DataArray:
     """Mask non-cropland pixels.
 
-    Retains only pixels whose ``land_cover`` class is in ``CROP_CLASSES``
-    (ESA WorldCover class 40 = cropland). All other pixels are set to NaN.
+    Retains the raster's ``crop_class`` (default: WorldCover class 40).
+    Annual rasters indexed by ``year`` are matched to each observation.
+    All other pixels are set to NaN.
 
     Parameters
     ----------
@@ -74,7 +75,13 @@ def apply_cropland_mask(evi: xr.DataArray, land_cover: xr.DataArray) -> xr.DataA
     xr.DataArray
         EVI values with non-cropland pixels set to NaN.
     """
-    cropland_mask = land_cover.isin(CROP_CLASSES)
+    if "year" in land_cover.dims:
+        years = evi.time.dt.year
+        missing = set(years.values) - set(land_cover.year.values)
+        if missing:
+            raise ValueError(f"Land cover missing observation years: {sorted(missing)}")
+        land_cover = land_cover.sel(year=years)
+    cropland_mask = land_cover == land_cover.attrs.get("crop_class", CROP_CLASSES[0])
     return evi.where(cropland_mask)
 
 
@@ -107,3 +114,11 @@ def aggregate_temporal(evi: xr.DataArray, freq: str) -> xr.DataArray:
             f"Unknown freq: {freq!r}. Available: ['Original', 'ME', 'QE', 'YE']"
         )
     return evi.resample(time=_RESAMPLE_FREQ[freq]).median()
+
+
+def prepare_evi(ds: xr.Dataset, land_cover: xr.DataArray | None = None) -> xr.DataArray:
+    """Quality-filter, scale, and optionally crop-mask each observation."""
+    evi = scale_evi(apply_quality_mask(ds))
+    if land_cover is not None:
+        evi = apply_cropland_mask(evi, land_cover)
+    return evi.rename("evi")
