@@ -11,7 +11,7 @@ Symbols beginning with `_` are internal and not part of the public contract. The
 | `"gee"` | MODIS, Sentinel-2 | Google Earth Engine | `export_to_drive=True` |
 | `"local"` | MODIS | None with Planetary Computer | Split large regions or date ranges |
 
-The GEE backend uses Dynamic World for cropland masking. The local backend uses ESA WorldCover, so masked results are not expected to match pixel-for-pixel.
+The GEE backend uses Dynamic World for cropland masking. The local backend defaults to ESA WorldCover and also supports annual Esri/Impact Observatory maps with `landcover_source="esri"`, so masked results are not expected to match pixel-for-pixel.
 
 ## Output contract
 
@@ -63,6 +63,60 @@ The GEE backend uses Dynamic World for cropland masking. The local backend uses 
 ```
 
 ```{autodoc2-object} evy._zonal_local.compute_zonal_stats
+```
+
+(raster-loading-and-geotiff-export)=
+## Raster loading and GeoTIFF export
+
+See the [runnable GeoTIFF export recipe](../notebooks/recipes/geotiff-export.ipynb) for EVI, land-cover, and binary crop-mask examples.
+
+Raster output uses the local backend without GEE authentication. No zonal
+aggregation is performed by `load_evi` or `export_geotiff`.
+
+```python
+import evy
+
+boundaries = evy.get_boundaries("RWA", admin_level=1)
+evi = evy.load_evi(
+    boundaries, "2023-01-01", "2023-01-31",
+    landcover_source="esri",  # mask_cropland=True by default
+)
+paths = evy.export_geotiff(evi, "output/evi")
+# One quality-filtered, scaled, crop-masked TIFF per MODIS observation.
+# Set mask_cropland=False for EVI over all land-cover classes.
+
+# Native 10 m land cover, without resampling it to MODIS resolution:
+lc = evy.load_landcover(boundaries, source="esri", year=2025)
+evy.export_geotiff(lc.rename("landcover_2025"), "output/landcover")
+
+# Binary cropland: 1=crop, 0=other, 255=nodata.
+crops = (lc == 5).where(lc != 0, 255).astype("uint8")
+crops = crops.rename("cropland_2025").rio.write_nodata(255)
+evy.export_geotiff(crops, "output/cropland")
+```
+
+Esri/Impact Observatory v003 maps cover 2017–2025 and use class 5 for crops.
+They are read from the public assets linked by the
+[Esri Land Cover Explorer](https://livingatlas.arcgis.com/landcoverexplorer/).
+Planetary Computer's `io-lulc-annual-v02` collection currently stops at 2023,
+so evy uses Esri's tile index and downloads for this source. Unavailable years
+raise an error; evy does not substitute a different year's map.
+
+For zonal statistics, use `landcover_source="esri"` with `backend="local"`
+in `zonal_stats` or `cached_zonal_stats`. Annual crop masks are matched to
+each observation **before** temporal aggregation. WorldCover remains the
+default; GEE continues to use Dynamic World. Cache entries distinguish sources.
+
+Exports preserve CRS, grid, and nodata and never overwrite existing files.
+Native Esri rasters use 10 m pixels in the first intersecting tile's UTM CRS;
+EVI exports retain the MODIS grid. Rasters cover the boundary **bounding box**,
+not a polygon-clipped area. Loading is lazy, but exporting reads pixels;
+split large regions and date ranges to keep memory and downloads manageable.
+
+```{autodoc2-object} evy.load.load_evi
+```
+
+```{autodoc2-object} evy.export.export_geotiff
 ```
 
 ## Phenology

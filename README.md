@@ -47,3 +47,24 @@ If you use this package in your research or work, please cite it using the infor
 ## License
 
 This project is licensed under the Mozilla Public License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+### Export rasters instead of zonal statistics
+
+```python
+import evy
+
+boundaries = evy.get_boundaries("RWA", admin_level=1)
+evi = evy.load_evi(
+    boundaries, "2023-01-01", "2023-01-31", landcover_source="esri"
+)
+evy.export_geotiff(evi, "output/evi")
+```
+
+This exports one GeoTIFF per observation, with quality filtering, EVI scaling,
+and annual cropland masking. Esri/Impact Observatory land cover supports
+2017–2025; WorldCover remains the default. Use `mask_cropland=False` for
+unmasked EVI. Exports cover the boundary bounding box and preserve the MODIS
+grid. Native 10 m land-cover exports are described in the
+[API reference](docs/api-reference.md).
+
+For a complete runnable example, see the [GeoTIFF export recipe](notebooks/recipes/geotiff-export.ipynb).

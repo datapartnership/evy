@@ -55,8 +55,8 @@ def _hash_boundaries(boundaries: gpd.GeoDataFrame, zone_col: str) -> str:
 
 
 # Bump when the zonal_stats output format changes, so old cache files are
-# not returned in the old format. v2: plain stat names, period-start dates.
-_SCHEMA_VERSION = 2
+# not returned in the old format. v3: mask each observation before aggregation.
+_SCHEMA_VERSION = 3
 
 
 def _make_cache_key(
@@ -107,6 +107,7 @@ def cached_zonal_stats(
     stats: str | list[str] = "mean",
     include_geometry: bool = False,
     mask_cropland: bool = True,
+    landcover_source: str = "worldcover",
     cache_key: str | None = None,
     cache_dir: Union[str, Path, None] = None,
     recompute: bool = False,
@@ -121,7 +122,7 @@ def cached_zonal_stats(
 
     Parameters
     ----------
-    boundaries, zone_col, backend, source, start_date, end_date, freq, stats, include_geometry, mask_cropland, scale, project
+    boundaries, zone_col, backend, source, start_date, end_date, freq, stats, include_geometry, mask_cropland, landcover_source, scale, project
         Forwarded to :func:`evy.zonal_stats` on cache miss. The cache key is
         derived from these arguments, so changing any of them produces a
         different cache file (``project`` is not part of the key, because
@@ -178,7 +179,7 @@ def cached_zonal_stats(
         mask_cropland=mask_cropland,
         include_geometry=include_geometry,
         user_key=cache_key,
-        extra={"scale": scale} if scale else None,
+        extra={"scale": scale, "landcover_source": landcover_source},
     )
     cache_file = cache_dir / f"{key}.parquet"
 
@@ -200,6 +201,7 @@ def cached_zonal_stats(
         stats=stats,
         include_geometry=include_geometry,
         mask_cropland=mask_cropland,
+        landcover_source=landcover_source,
         scale=scale,
         project=project,
     )

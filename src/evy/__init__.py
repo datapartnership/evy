@@ -7,8 +7,9 @@ from evy.cache import cached_zonal_stats, clear_zonal_cache
 from evy.collections import list_collections
 from evy._auth import authenticate, is_authenticated
 from evy._convert import check_task_status
-from evy.load import EmptyStacResultError, load_modis, load_landcover
+from evy.load import EmptyStacResultError, load_modis, load_landcover, load_evi
 from evy._zonal_local import compute_zonal_stats
+from evy.export import export_geotiff
 
 from evy.phenology import (
     calculate_phenology,
@@ -39,6 +40,8 @@ __all__ = [
     "zonal_stats",
     "cached_zonal_stats",
     "load_modis",
+    "load_evi",
+    "export_geotiff",
     "load_landcover",
     "compute_zonal_stats",
     "EmptyStacResultError",

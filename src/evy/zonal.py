@@ -78,6 +78,7 @@ def zonal_stats(
     stats: str | list[str] = "mean",
     include_geometry: bool = False,
     mask_cropland: bool = True,
+    landcover_source: str = "worldcover",
     scale: int | None = None,
     export_to_drive: bool = False,
     drive_folder: str | None = None,
@@ -130,8 +131,11 @@ def zonal_stats(
         If True, return GeoDataFrame with geometry column.
         If False, return pandas DataFrame.
     mask_cropland:
-        If False, do not mask non-cropland areas using Dynamic World
-        land cover classification.
+        If False, do not mask non-cropland areas. GEE uses Dynamic World;
+        local uses the selected landcover_source.
+    landcover_source:
+        Local only: 'worldcover' (default, static class 40) or 'esri'
+        (annual 2017–2025 maps, class 5). GEE always uses Dynamic World.
     scale:
         GEE only. Resolution in meters. Default depends on source:
         - MODIS: 250m (native resolution)
@@ -170,6 +174,11 @@ def zonal_stats(
             f"Available columns: {list(boundaries.columns)}"
         )
 
+    if landcover_source not in ("worldcover", "esri"):
+        raise ValueError("landcover_source must be 'worldcover' or 'esri'")
+    if backend == "gee" and landcover_source != "worldcover":
+        raise ValueError("landcover_source='esri' requires backend='local'")
+
     gee_only = [
         name
         for name, value in [
@@ -195,6 +204,7 @@ def zonal_stats(
             stats=stats,
             include_geometry=include_geometry,
             mask_cropland=mask_cropland,
+            landcover_source=landcover_source,
         )
 
     _ensure_initialized(project)

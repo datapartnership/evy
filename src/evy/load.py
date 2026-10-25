@@ -1,6 +1,11 @@
 """Data loading from STAC items via odc-stac."""
 
 import logging
+from datetime import datetime, timezone
+
+import requests
+import pystac
+from shapely.geometry import shape
 
 import planetary_computer
 from odc import stac as odc_stac
@@ -110,7 +115,7 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
     >>> ds.evi_raw.sizes
     {'time': 23, 'y': ..., 'x': ...}
     """
-    bbox = boundaries.total_bounds
+    bbox = boundaries.to_crs(4326).total_bounds
     datetime_range = f"{start_date}/{end_date}"
     collection = "modis-13Q1-061"
 
@@ -149,67 +154,165 @@ def load_modis(boundaries: gpd.GeoDataFrame, start_date: str, end_date: str):
     return ds.sel(time=slice(start_date, end_date))
 
 
-def load_landcover(boundaries: gpd.GeoDataFrame, ds_evi: xr.Dataset):
+def load_landcover(
+    boundaries: gpd.GeoDataFrame,
+    ds_evi: xr.Dataset | None = None,
+    *,
+    source: str = "worldcover",
+    year: int | None = None,
+) -> xr.DataArray:
+    """Load land cover from WorldCover or Esri/Impact Observatory.
+
+    ``source="worldcover"`` preserves the static ESA WorldCover mask (class
+    40). ``source="esri"`` uses Esri's annual v003 maps for 2017–2025
+    (class 5), downloaded from the public Land Cover Explorer assets.
+    Missing coverage or unavailable years raise an error; no year is substituted.
+
+    With ``ds_evi``, resample categories by mode to its grid. Esri returns
+    dimensions ``(year, y, x)`` for the observation years in that dataset.
+    Without ``ds_evi``, Esri requires ``year`` and returns a native 10 m
+    raster in the first intersecting tile's UTM CRS. WorldCover also supports
+    native 10 m loading. Results cover the boundaries' bounding box and are
+    lazy, allowing large native rasters to be exported one year at a time.
+    Metadata includes ``crop_class`` and ``landcover_source``.
     """
-    Load an ESA WorldCover land cover raster aligned to an EVI dataset.
-
-    Searches the Microsoft Planetary Computer STAC endpoint for the
-    ``esa-worldcover`` collection over the boundary bounding box and
-    reprojects the result to match the grid of ``ds_evi`` using nearest-
-    neighbor (mode) resampling. Only a single timestep is loaded, because
-    WorldCover is a static (annual) product.
-
-    Parameters
-    ----------
-    boundaries : gpd.GeoDataFrame
-        Zone boundaries used to derive the STAC search bounding box.
-    ds_evi : xr.Dataset
-        An EVI Dataset (typically from :func:`load_modis`) whose grid the
-        land cover layer should be aligned to.
-
-    Returns
-    -------
-    xr.DataArray
-        Eager (computed) DataArray of WorldCover class codes, indexed by
-        ``(y, x)``. Class code 40 is cropland; see the ESA WorldCover
-        documentation for the full legend.
-
-    Raises
-    ------
-    EmptyStacResultError
-        If the STAC catalog returns zero ``esa-worldcover`` items for the
-        requested bbox.
-
-    Examples
-    --------
-    >>> import evy
-    >>> gdf = evy.get_boundaries('KEN', admin_level=1)
-    >>> ds = evy.load_modis(gdf, '2023-01-01', '2023-12-31')
-    >>> lc = evy.load_landcover(gdf, ds)
-    >>> cropland_mask = (lc == 40)
-    """
-    bbox = boundaries.total_bounds
-    collection = "esa-worldcover"
-
-    items = _stac_search([collection], bbox)
-
-    if not items:
-        raise EmptyStacResultError(
-            f"No land cover items found for collection='{collection}', "
-            f"bbox={list(bbox)}. Check that the boundary intersects ESA "
-            "WorldCover coverage."
-        )
-
-    logger.info(f"Found {len(items)} land cover items for bounding box {bbox}.")
-    wc = odc_stac.load(
-        items,
-        bands=["map"],
-        like=ds_evi,
-        chunks={"x": 2048, "y": 2048, "time": 1},
-        patch_url=planetary_computer.sign,
-        resampling="mode",
-    )
-
-    lc = wc["map"].isel(time=0).compute()
-
+    if source not in ("worldcover", "esri"):
+        raise ValueError("landcover source must be 'worldcover' or 'esri'")
+    bbox = boundaries.to_crs(4326).total_bounds
+    if source == "esri":
+        if ds_evi is None and year is None:
+            raise ValueError("year is required for native Esri land cover")
+        years = [year] if year is not None else sorted(set(ds_evi.time.dt.year.values))
+        if not years or any(y < 2017 or y > 2025 for y in years):
+            raise ValueError("Esri land cover supports years 2017–2025 only")
+        features = _esri_footprints(bbox)
+        if not features:
+            raise EmptyStacResultError(
+                f"No Esri land cover tiles for bbox={list(bbox)}"
+            )
+        layers = []
+        for y in years:
+            items = []
+            for feature in features:
+                tile = feature["properties"]["ImageName"]
+                end = f"{y}1231" if y >= 2024 else f"{y + 1}0101"
+                url = (
+                    "https://lulctimeseries.blob.core.windows.net/lulctimeseriesv003/"
+                    f"lc{y}/{tile}_{y}0101-{end}.tif"
+                )
+                item = pystac.Item(
+                    f"{tile}-{y}",
+                    feature["geometry"],
+                    list(shape(feature["geometry"]).bounds),
+                    datetime(int(y), 1, 1, tzinfo=timezone.utc),
+                    {},
+                )
+                item.add_asset(
+                    "data", pystac.Asset(url, media_type=pystac.MediaType.COG)
+                )
+                items.append(item)
+            # Tile names encode UTM zone and latitude band (N and above are north).
+            tile = features[0]["properties"]["ImageName"]
+            epsg = (32600 if tile[2] >= "N" else 32700) + int(tile[:2])
+            grid = (
+                {"like": ds_evi}
+                if ds_evi is not None
+                else {
+                    "bbox": bbox,
+                    "crs": f"EPSG:{epsg}",
+                    "resolution": 10,
+                }
+            )
+            layer = odc_stac.load(
+                items,
+                bands=["data"],
+                chunks={"x": 2048, "y": 2048},
+                dtype="uint8",
+                nodata=0,
+                resampling="mode",
+                **grid,
+            )["data"].isel(time=0, drop=True)
+            layers.append(layer.expand_dims(year=[int(y)]))
+        lc = xr.concat(layers, dim="year")
+        if ds_evi is None:
+            lc = lc.isel(year=0, drop=True)
+        crop_class = 5
+    else:
+        date_range = f"{year}-01-01/{year}-12-31" if year is not None else None
+        items = _stac_search(["esa-worldcover"], bbox, date_range)
+        if not items:
+            raise EmptyStacResultError(
+                f"No land cover items found for collection='esa-worldcover', bbox={list(bbox)}"
+            )
+        grid = {"like": ds_evi} if ds_evi is not None else {"bbox": bbox}
+        lc = odc_stac.load(
+            items,
+            bands=["map"],
+            chunks={"x": 2048, "y": 2048, "time": 1},
+            patch_url=planetary_computer.sign,
+            resampling="mode",
+            **grid,
+        )["map"].isel(time=0, drop=True)
+        crop_class = 40
+    lc = lc.rename("landcover")
+    lc.attrs.update(crop_class=crop_class, landcover_source=source)
     return lc
+
+
+def _esri_footprints(bbox):
+    """Query the tile index used by Esri's Land Cover Explorer."""
+    features = []
+    while True:
+        response = requests.get(
+            "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/"
+            "S2LULCFootprints/FeatureServer/0/query",
+            params={
+                "f": "geojson",
+                "where": "1=1",
+                "outFields": "ImageName",
+                "geometry": ",".join(str(v) for v in bbox),
+                "geometryType": "esriGeometryEnvelope",
+                "inSR": 4326,
+                "outSR": 4326,
+                "spatialRel": "esriSpatialRelIntersects",
+                "resultOffset": len(features),
+                "resultRecordCount": 1000,
+                "orderByFields": "OBJECTID",
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        result = response.json()
+        if "error" in result:
+            raise RuntimeError(f"Esri tile search failed: {result['error']}")
+        page = result["features"]
+        features.extend(page)
+        if len(page) < 1000:
+            return features
+
+
+def load_evi(
+    boundaries: gpd.GeoDataFrame,
+    start_date: str,
+    end_date: str,
+    *,
+    mask_cropland: bool = True,
+    landcover_source: str = "worldcover",
+) -> xr.DataArray:
+    """Load scaled, quality-filtered MODIS EVI pixels without aggregation.
+
+    Returns lazy ``(time, y, x)`` data at MODIS resolution over the boundary
+    bounding box. Optionally mask cropland with WorldCover or annual Esri
+    maps. Use :func:`evy.export_geotiff` to save one raster per observation.
+    """
+    from evy._process import prepare_evi
+
+    if landcover_source not in ("worldcover", "esri"):
+        raise ValueError("landcover_source must be 'worldcover' or 'esri'")
+    ds = load_modis(boundaries, start_date, end_date)
+    lc = (
+        load_landcover(boundaries, ds, source=landcover_source)
+        if mask_cropland
+        else None
+    )
+    return prepare_evi(ds, lc)

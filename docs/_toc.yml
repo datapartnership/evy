@@ -14,6 +14,7 @@ parts:
       - file: notebooks/recipes/multi-country-comparison
       - file: notebooks/recipes/phenology-extraction
       - file: notebooks/recipes/local-backend
+      - file: notebooks/recipes/geotiff-export
       - file: docs/troubleshooting
 
   - caption: Concepts & Methods

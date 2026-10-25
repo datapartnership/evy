@@ -228,3 +228,19 @@ def test_cached_zonal_stats_roundtrips_geometry(
     assert isinstance(second, gpd.GeoDataFrame)
     assert second.crs.to_epsg() == 4326
     assert second.geometry.notna().all()
+
+
+def test_cache_separates_landcover_sources(tmp_path, small_boundaries, fake_zonal_df):
+    with patch("evy.zonal.zonal_stats", return_value=fake_zonal_df) as zs:
+        for source in ("worldcover", "esri", "esri"):
+            cached_zonal_stats(
+                small_boundaries,
+                zone_col="shapeName",
+                backend="local",
+                start_date="2023-01-01",
+                end_date="2023-01-31",
+                landcover_source=source,
+                cache_dir=tmp_path,
+            )
+    assert zs.call_count == 2
+    assert zs.call_args.kwargs["landcover_source"] == "esri"

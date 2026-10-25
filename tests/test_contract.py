@@ -127,3 +127,31 @@ def test_gee_batches_do_not_split_aggregate_periods():
         ("2023-01-01", "2024-01-01"),
         ("2024-01-01", "2024-03-21"),
     ]
+
+
+def test_zonal_forwards_landcover_source(small_boundaries):
+    from unittest.mock import patch
+
+    with patch("evy._zonal_local._zonal_stats_local") as local:
+        zonal_stats(
+            small_boundaries,
+            zone_col="shapeName",
+            backend="local",
+            landcover_source="esri",
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+        )
+    assert local.call_args.kwargs["landcover_source"] == "esri"
+    with pytest.raises(ValueError, match="requires backend='local'"):
+        zonal_stats(small_boundaries, zone_col="shapeName", landcover_source="esri")
+
+
+def test_local_masks_each_observation_before_aggregation(small_boundaries):
+    import xarray as xr
+
+    ds = _synthetic_modis([5000, 3000, 6000])
+    lc = xr.full_like(ds.evi_raw, 5).rename({"time": "year"}).isel(year=[0])
+    lc = lc.assign_coords(year=[2023])
+    lc.attrs["crop_class"] = 5
+    out = compute_zonal_stats(ds, small_boundaries, zone_col="shapeName", land_cover=lc)
+    assert np.allclose(out.loc[out.date == "2023-01-01", "mean"], 0.4)
