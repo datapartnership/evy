@@ -52,5 +52,6 @@ sphinx:
       - path: src/evy
         auto_mode: false
     autodoc2_render_plugin: myst
+    myst_heading_anchors: 3
     html_show_copyright: false
     html_last_updated_fmt: "%b %d, %Y"
