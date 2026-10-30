@@ -127,6 +127,32 @@ shares the same quality masking and scaling as LAADS, but transfers whole tiles.
 Missing tiles download in batches of up to four transfers. Allow several hundred
 MB per tile and observation.
 
+Use the same Earthdata Login setup shown above, then select the full-HDF provider:
+
+```python
+import evy
+
+boundaries = evy.get_boundaries("RWA", admin_level=1)
+df = evy.cached_zonal_stats(
+    boundaries,
+    zone_col="shapeName",
+    backend="local",
+    provider="earthdata",
+    start_date="2023-01-01",
+    end_date="2023-01-01",  # One composite-start date to limit the first download.
+    mask_cropland=False,
+)
+```
+
+The same provider works with `load_modis` for raw EVI/QA pixels and `load_evi`
+for scaled, quality-filtered pixels. `mask_cropland=False` avoids land-cover
+downloads; omit it to retain the default cropland mask. Repeated identical
+`cached_zonal_stats` calls reuse the statistics cache. Changing the study area
+can still reuse completed HDF tiles that intersect the new area.
+
 Completed HDFs are reused under `$EVY_CACHE_DIR/earthdata` (or the platform evy
 cache). Delete source-cache directories only after finishing lazy computations.
-Provider selection is included in statistics cache keys.
+Provider selection is included in statistics cache keys. `clear_zonal_cache`
+does not remove the HDF files. Calls that need to compute results still perform
+NASA authentication and discovery even when HDFs are cached; this is not a
+fully offline provider.

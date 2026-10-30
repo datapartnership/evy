@@ -25,6 +25,8 @@ default LAADS provider on `load_modis`, `load_evi`, `zonal_stats`, or
 for full-HDF downloads instead. Provider selection and resolved backend choices
 are included in statistics cache keys. See the [NASA access example](../README.md#default-modis-access-nasa-laads)
 for authentication, disk cache behavior, and download size considerations.
+The [full-HDF example](../README.md#full-nasa-hdf-downloads-optional) includes a
+complete statistics call using `provider="earthdata"`.
 
 Use `provider="laads"` for lazy NASA LAADS OPeNDAP subsets of EVI and pixel
 reliability on the native MODIS grid. It supports Terra and Aqua, uses at most
