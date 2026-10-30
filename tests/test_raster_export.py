@@ -171,7 +171,12 @@ def test_landcover_retains_exact_target_coordinates(small_boundaries, source, cr
     with (
         patch("evy.load._stac_search", return_value=[object()]),
         patch("evy.load._esri_footprints", return_value=[feature]),
-        patch("evy.load.odc_stac.load", return_value=layer.to_dataset(name="map" if source == "worldcover" else "data")),
+        patch(
+            "evy.load.odc_stac.load",
+            return_value=layer.to_dataset(
+                name="map" if source == "worldcover" else "data"
+            ),
+        ),
     ):
         lc = evy.load_landcover(small_boundaries, ds, source=source)
     np.testing.assert_array_equal(lc.x, ds.x)

@@ -28,5 +28,6 @@ parts:
   - caption: About
     chapters:
       - file: docs/CONTRIBUTING
+      - file: CHANGELOG
       - file: docs/code-of-conduct
       - file: docs/citation

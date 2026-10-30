@@ -17,6 +17,7 @@ import evy
 from evy._process import prepare_evi
 
 
+@pytest.mark.live
 @pytest.mark.skipif(
     os.getenv("EVY_TEST_EARTHDATA") != "1",
     reason="requires live NASA credentials and network",

@@ -1,40 +1,22 @@
-.PHONY: install install-dev clean test lint format help
+.PHONY: help install install-dev test lint format build docs-build package-check check clean
 
-# Default target
+# Compatibility aliases; development commands are defined in justfile.
 help:
-	@echo "evy - GEE-first zonal statistics library"
-	@echo ""
-	@echo "Usage:"
-	@echo "  make install      Install package"
-	@echo "  make install-dev  Install package in development mode"
-	@echo "  make test         Run tests"
-	@echo "  make lint         Run linter (ruff)"
-	@echo "  make format       Format code (ruff)"
-	@echo "  make clean        Remove build artifacts"
-	@echo ""
+	@just --list
 
-# Install package
 install:
 	uv pip install .
 
-# Install in development mode with dev dependencies
 install-dev:
-	uv pip install -e ".[docs]"
+	just setup
 
-# Run tests
-test:
-	uv run pytest tests/ -v
+test lint format package-check check docs-build:
+	just $@
 
-# Run linter
-lint:
-	uv run ruff check src/
+# Preserve the historical documentation-build command.
+build:
+	just docs-build
 
-# Format code
-format:
-	uv run ruff format src/
-	uv run ruff check --fix src/
-
-# Clean build artifacts
 clean:
 	rm -rf build/
 	rm -rf dist/
@@ -44,7 +26,3 @@ clean:
 	rm -rf .ruff_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-
-# Build documentation
-build:
-	uv run --python 3.11 --extra docs jupyter-book build . --config docs/_config.yml --toc docs/_toc.yml

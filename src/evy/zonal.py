@@ -183,6 +183,15 @@ def zonal_stats(
           ``boundaries``
 
         If export_to_drive=True: Task ID string for the export task
+
+    Raises
+    ------
+    TypeError
+        If boundaries is not a GeoDataFrame, or an unknown keyword is passed.
+    ValueError
+        If zone_col is absent, or a backend, provider, source, frequency,
+        statistic, or backend-specific option is unsupported. Loader and
+        upstream service errors propagate, including during lazy computation.
     """
     if not isinstance(boundaries, gpd.GeoDataFrame):
         raise TypeError(
@@ -430,7 +439,8 @@ def _gee_date_batches(start_date: str, end_date: str, freq: str):
     for offset in range(0, len(periods), periods_per_batch):
         group = periods[offset : offset + periods_per_batch]
         batch_start = max(start, group[0].start_time)
-        batch_end = min(end, group[-1].end_time + pd.Timedelta(nanoseconds=1))
+        # Use the next period boundary directly, avoiding timestamp-resolution rounding.
+        batch_end = min(end, (group[-1] + 1).start_time)
         batches.append(
             (batch_start.strftime("%Y-%m-%d"), batch_end.strftime("%Y-%m-%d"))
         )

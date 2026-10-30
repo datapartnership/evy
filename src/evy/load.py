@@ -74,7 +74,7 @@ def load_modis(
     end_date: str,
     *,
     provider: str = "laads",
-):
+) -> xr.Dataset:
     """
     Load MODIS EVI and quality bands from Planetary Computer or NASA.
 

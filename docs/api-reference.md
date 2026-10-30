@@ -40,6 +40,40 @@ statistics cache and are not removed by `clear_zonal_cache`.
 
 `zonal_stats` and `cached_zonal_stats` return `date`, the requested `zone_col`, and one column per requested statistic. `date` is the observation date for `"Original"` or the first day of an aggregated calendar period. When `include_geometry=True`, the result is a GeoDataFrame with geometry in the input boundaries' CRS.
 
+## Arguments and errors
+
+Dates on local raster loaders and `zonal_stats` are ISO `YYYY-MM-DD` strings;
+start and end dates are inclusive. Statistics default to `"mean"`, frequency to
+`"ME"`, and cropland masking to `True`. Supported frequencies are `"Original"`,
+`"ME"`, `"QE"`, and `"YE"`. Supported statistics are `"mean"`, `"median"`,
+`"min"`, `"max"`, `"std"`, `"sum"`, and `"count"`; pass a string or list.
+The statistics columns follow the requested order. Row order is not guaranteed;
+sort by date and zone when comparing results. Missing/masked data can produce
+NaN statistics. Counts and sums depend on each backend's pixel weighting.
+
+| Entry point | Result | Errors callers can handle |
+|---|---|---|
+| `zonal_stats` | DataFrame, GeoDataFrame with `include_geometry=True`, or a GEE task ID with `export_to_drive=True` | `TypeError` for non-GeoDataFrame boundaries or unknown keywords; `ValueError` for missing zone columns and unsupported options/combinations |
+| `cached_zonal_stats` | Same tabular schema as `zonal_stats`; no Drive export | Forwarded processing errors; filesystem errors for cache reads/writes |
+| `load_modis` | Lazy Dataset with `evi_raw` and `qa`, dimensions `(time, y, x)` and native raster CRS | `EmptyStacResultError` for empty PC searches; `ValueError` for unknown providers or no NASA observations; `RuntimeError` for NASA authentication/download failures |
+| `load_evi` | Lazy, quality-filtered and scaled EVI DataArray, dimensions `(time, y, x)` | Loader errors and `ValueError` for unsupported land-cover selection |
+| `export_geotiff` | List of written `Path` objects | `TypeError` for non-DataArray input; `ValueError` for missing CRS or invalid dimensions/names; `FileExistsError` instead of overwriting files |
+
+Provider selection is `"laads"`, `"planetary_computer"`, or `"earthdata"`.
+Local processing supports MODIS; Sentinel-2 requires GEE. `scale`,
+`export_to_drive`, `drive_folder`, and `project` are GEE-only options. NASA or
+STAC errors can occur when lazy rasters are computed rather than when loaded.
+Upstream network/GDAL errors may propagate; the table is not an exhaustive list
+of third-party exceptions.
+
+Raw EVI is scaled by 0.0001; processed EVI excludes values outside [-0.2, 1.0]
+and poor-quality pixels. Calendar composites use pixel-wise temporal medians
+before spatial statistics. Identical output schemas do not imply identical
+coverage, masks, or numerical weighting across providers/backends.
+
+Public API compatibility and the deprecation policy are described in the
+[contributor guide](CONTRIBUTING.md#public-api-and-compatibility).
+
 ## Boundaries
 
 ```{autodoc2-object} evy.boundaries.get_boundaries

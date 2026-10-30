@@ -1,5 +1,6 @@
 """Both backends must return the same output shape (the evy output contract)."""
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
@@ -69,16 +70,24 @@ def _synthetic_modis(evi_values):
     return ds.rio.write_crs("EPSG:3857")
 
 
-def test_local_output_contract(small_boundaries):
+@pytest.mark.parametrize("include_geometry", [False, True])
+@pytest.mark.parametrize(
+    "stats", [["mean", "std"], ["count", "sum", "std", "max", "min", "median", "mean"]]
+)
+def test_local_output_contract(small_boundaries, include_geometry, stats):
     ds = _synthetic_modis([5000, 3000, 6000])
     out = compute_zonal_stats(
         ds,
         small_boundaries,
         zone_col="shapeName",
-        stats=["mean", "std"],
-        include_geometry=True,
+        stats=stats,
+        include_geometry=include_geometry,
     )
-    assert list(out.columns) == ["date", "shapeName", "mean", "std", "geometry"]
+    assert list(out.columns) == ["date", "shapeName", *stats] + (
+        ["geometry"] if include_geometry else []
+    )
+    assert pd.api.types.is_datetime64_any_dtype(out.date)
+    assert isinstance(out, gpd.GeoDataFrame) == include_geometry
     # Period-start labels, same as GEE.
     assert sorted(out["date"].unique()) == list(
         pd.to_datetime(["2023-01-01", "2023-02-01"])
@@ -86,8 +95,9 @@ def test_local_output_contract(small_boundaries):
     jan = out[out["date"] == "2023-01-01"]
     assert np.allclose(jan["mean"], 0.4)  # median of 0.5 and 0.3
     # Geometry comes back in the input CRS, not the raster CRS.
-    assert out.crs == small_boundaries.crs
-    assert np.allclose(out.total_bounds, small_boundaries.total_bounds, atol=1e-6)
+    if include_geometry:
+        assert out.crs == small_boundaries.crs
+        assert np.allclose(out.total_bounds, small_boundaries.total_bounds, atol=1e-6)
 
 
 def test_gee_output_contract_renames_and_drops_extras():
@@ -104,6 +114,7 @@ def test_gee_output_contract_renames_and_drops_extras():
     out = _to_output_contract(raw, "shapeName", ["mean", "std"], include_geometry=False)
     assert list(out.columns) == ["date", "shapeName", "mean", "std"]
     assert out["std"].iloc[0] == 0.1
+    assert pd.api.types.is_datetime64_any_dtype(out.date)
 
 
 @pytest.mark.parametrize(

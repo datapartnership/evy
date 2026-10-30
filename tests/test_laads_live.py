@@ -16,6 +16,7 @@ from shapely.geometry import box
 import evy
 
 
+@pytest.mark.live
 @pytest.mark.skipif(
     os.getenv("EVY_TEST_LAADS") != "1", reason="requires NASA login and network"
 )
