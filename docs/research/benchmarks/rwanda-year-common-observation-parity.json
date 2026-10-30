@@ -1,0 +1,18 @@
+{
+  "country": "RWA",
+  "year": 2023,
+  "mask_cropland": true,
+  "compared_observations": 44,
+  "rows": 60,
+  "statistics_match": true,
+  "rtol": 1e-06,
+  "atol": 1e-08,
+  "excluded_nasa_dates_for_comparison_only": [
+    "2023-02-18",
+    "2023-10-24"
+  ],
+  "elapsed_seconds": 22.72431874999893,
+  "max_absolute_mean_difference": 5.994427176858608e-12,
+  "max_absolute_count_difference": 1.1059455573558807e-06,
+  "note": "NASA subsets reused; PC comparison CSV came from the completed full country/year run. Production default retains all 46 NASA observations."
+}

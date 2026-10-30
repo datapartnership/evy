@@ -6,6 +6,7 @@ import os
 import re
 from tempfile import TemporaryDirectory
 from threading import Lock
+from time import sleep
 from urllib.parse import urlparse
 
 import dask.array as da
@@ -15,6 +16,7 @@ import pandas as pd
 from pyproj import Transformer
 from rasterio.transform import from_origin
 import rioxarray  # noqa: F401
+import requests
 import xarray as xr
 
 from evy.cache import _cache_base
@@ -26,6 +28,7 @@ _BANDS = {"evi_raw": "250m 16 days EVI", "qa": "250m 16 days pixel reliability"}
 _FILENAME = re.compile(r"(M[OY]D13Q1)\.A(\d{7})\.(h\d{2}v\d{2})\.061\.(\d{13})\.hdf")
 # HDF4's C library is not thread safe; Dask still schedules other work normally.
 _HDF_LOCK = Lock()
+_DOWNLOAD_THREADS = 4
 
 
 def _read_band(path, name, start, count):
@@ -111,15 +114,12 @@ def _open_tile(path, date, bounds):
     )
 
 
-def load_modis_earthdata(boundaries, start_date, end_date):
-    """Search both satellites, atomically cache HDF files, and mosaic by date."""
+def _find_modis_tiles(boundaries, start_date, end_date):
+    """Authenticate and select latest v061 granules with composite starts in range."""
     try:
         import earthaccess
-        import pyhdf.SD  # noqa: F401
     except ImportError as exc:
-        raise ImportError(
-            "Direct NASA access requires: pip install 'evy[earthdata]'"
-        ) from exc
+        raise ImportError("NASA access requires: pip install 'evy[earthdata]'") from exc
 
     start, end = pd.Timestamp(start_date), pd.Timestamp(end_date)
     if pd.isna(start) or pd.isna(end) or start > end:
@@ -142,12 +142,26 @@ def load_modis_earthdata(boundaries, start_date, end_date):
     )
     from earthaccess.exceptions import LoginAttemptFailure, LoginStrategyUnavailable
 
-    try:
-        auth = earthaccess.login(strategy=strategy)
-    except (LoginAttemptFailure, LoginStrategyUnavailable) as exc:
-        raise RuntimeError(
-            "NASA Earthdata login failed. Configure Earthdata credentials or call earthaccess.login(persist=True)."
-        ) from exc
+    for attempt in range(3):
+        try:
+            auth = earthaccess.login(strategy=strategy)
+        except (requests.Timeout, requests.ConnectionError):
+            if attempt == 2:
+                raise RuntimeError(
+                    "NASA Earthdata login connection failed; retry the request"
+                ) from None
+            sleep(2**attempt)
+        except (
+            LoginAttemptFailure,
+            LoginStrategyUnavailable,
+            requests.RequestException,
+        ):
+            # Authentication exceptions can carry Authorization headers in tracebacks.
+            raise RuntimeError(
+                "NASA Earthdata login failed. Configure Earthdata credentials or call earthaccess.login(persist=True)."
+            ) from None
+        else:
+            break
     if not auth.authenticated:
         raise RuntimeError(
             "NASA Earthdata login failed. Configure Earthdata credentials or call earthaccess.login(persist=True)."
@@ -155,14 +169,18 @@ def load_modis_earthdata(boundaries, start_date, end_date):
 
     granules = []
     for product in ("MOD13Q1", "MYD13Q1"):
-        granules.extend(
-            earthaccess.search_data(
+        try:
+            results = earthaccess.search_data(
                 short_name=product,
                 version="061",
                 bounding_box=bbox,
                 temporal=(start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")),
             )
-        )
+        except requests.RequestException:
+            raise RuntimeError(
+                f"NASA granule search failed for {product}; retry the request"
+            ) from None
+        granules.extend(results)
 
     # CMR returns overlapping composites. Match evy's composite-start semantics
     # and keep only the latest processing revision for each product/date/tile.
@@ -197,21 +215,46 @@ def load_modis_earthdata(boundaries, start_date, end_date):
             f"No NASA MODIS composites start within {start_date}/{end_date} for bbox={bbox}"
         )
 
+    return selected, bounds
+
+
+def load_modis_earthdata(boundaries, start_date, end_date):
+    """Search both satellites, atomically cache HDF files, and mosaic by date."""
+    try:
+        import earthaccess
+        import pyhdf.SD  # noqa: F401
+    except ImportError as exc:
+        raise ImportError(
+            "Direct NASA access requires: pip install 'evy[earthdata]'"
+        ) from exc
+
+    selected, bounds = _find_modis_tiles(boundaries, start_date, end_date)
+
     cache = _cache_base() / "earthdata"
     cache.mkdir(parents=True, exist_ok=True)
+    missing = [item for item in selected.values() if not (cache / item[0]).exists()]
+    # Publish small batches so retries retain progress through long histories.
+    for offset in range(0, len(missing), _DOWNLOAD_THREADS):
+        batch = missing[offset : offset + _DOWNLOAD_THREADS]
+        with TemporaryDirectory(dir=cache) as staging:
+            files = earthaccess.download(
+                [granule for _, _, granule in batch],
+                local_path=staging,
+                threads=_DOWNLOAD_THREADS,
+            )
+            downloaded = {Path(file).name: Path(file) for file in files}
+            if len(files) != len(batch) or set(downloaded) != {
+                name for name, _, _ in batch
+            }:
+                raise RuntimeError("NASA download incomplete; retry the request")
+            # Keep HDF4 validation serial; only network transfers run concurrently.
+            for name, date, _ in batch:
+                _open_tile(downloaded[name], date, bounds)
+                downloaded[name].replace(cache / name)
+
     by_date = {}
-    for name, date, granule in sorted(selected.values(), key=lambda item: item[0]):
+    for name, date, _ in sorted(selected.values(), key=lambda item: item[0]):
         path = cache / name
-        if not path.exists():
-            with TemporaryDirectory(dir=cache) as staging:
-                files = earthaccess.download([granule], local_path=staging, threads=1)
-                if len(files) != 1 or Path(files[0]).name != name:
-                    raise RuntimeError(
-                        f"NASA download incomplete for {name}; retry the request"
-                    )
-                # Validate before publishing; a failed transfer never poisons cache.
-                _open_tile(Path(files[0]), date, bounds)
-                Path(files[0]).replace(path)
         tile = _open_tile(path, date, bounds)
         if tile is not None:
             by_date.setdefault(date, []).append(tile)

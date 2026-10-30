@@ -45,6 +45,7 @@ This opens a browser window where you sign in. The resulting token is cached and
 task_id = evy.zonal_stats(
     boundaries=gdf,
     zone_col="shapeName",
+    backend="gee",
     start_date="2000-01-01",
     end_date="2024-12-31",
     export_to_drive=True,
@@ -61,10 +62,11 @@ evy.check_task_status(task_id)
 
 **Cause:** Many rasterio/GDAL distributions do not include an HDF4 driver.
 
-**Fix:** Use the default Planetary Computer backend, which serves Cloud-Optimized GeoTIFFs instead of HDF4:
+**Fix:** The default LAADS provider reads NetCDF4 subsets without an HDF4
+driver. Alternatively, use Planetary Computer's Cloud-Optimized GeoTIFFs:
 
 ```python
-evy.zonal_stats(..., backend="local", source="modis")
+evy.zonal_stats(..., backend="local", provider="planetary_computer", source="modis")
 ```
 
 For direct NASA access, install `evy[earthdata]` and use
@@ -73,8 +75,10 @@ For direct NASA access, install `evy[earthdata]` and use
 This reads downloaded HDF4 files with `pyhdf` independently of GDAL's drivers.
 If a pyhdf wheel is unavailable on your platform, follow the
 [pyhdf installation instructions](https://fhs.github.io/pyhdf/install.html).
-The MODIS OPeNDAP route mentioned in older evy documentation was
+The legacy LP DAAC OPeNDAP service mentioned in older documentation was
 [retired by NASA](https://www.earthdata.nasa.gov/data/alerts-outages/modis-version-6-1-opendap-access-lp-daac-retired).
+The independent LAADS OPeNDAP service used by `provider="laads"` supports
+Terra and Aqua and remains a separate access route.
 
 ---
 
@@ -91,7 +95,7 @@ import earthaccess
 earthaccess.login(persist=True)
 ```
 
-Subsequent `evy` calls with `provider="earthdata"` use the persisted credentials
+Subsequent default MODIS calls and `provider="earthdata"` use the persisted credentials
 without prompting. Environment credentials take precedence over `.netrc`.
 
 ---

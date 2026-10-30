@@ -69,17 +69,20 @@ def _stac_search(collections: list[str], bbox, datetime_range: str | None = None
 
 
 def load_modis(
-    boundaries: gpd.GeoDataFrame, start_date: str, end_date: str,
-    *, provider: str = "planetary_computer",
+    boundaries: gpd.GeoDataFrame,
+    start_date: str,
+    end_date: str,
+    *,
+    provider: str = "laads",
 ):
     """
-    Load MODIS EVI and quality bands from Planetary Computer or NASA Earthdata.
+    Load MODIS EVI and quality bands from Planetary Computer or NASA.
 
-    Searches the Microsoft Planetary Computer STAC endpoint for MOD13Q1 and
-    MYD13Q1 (MODIS Terra and Aqua 16-day, 250m) items intersecting the boundary bounding
-    box and opens them lazily via ``odc-stac``. The returned Dataset is
-    Dask-backed; no pixels are materialized until you call ``.compute()``
-    or reduce over the data.
+    Discovers MOD13Q1 and MYD13Q1 (Terra/Aqua 16-day, 250 m) composites
+    intersecting the boundary bounding box. The default LAADS provider reads
+    native EVI/QA windows via OPeNDAP. Planetary Computer uses ``odc-stac``;
+    the full-HDF Earthdata provider downloads source files before lazy reads.
+    Returned pixels are Dask-backed and computed on demand.
 
     Parameters
     ----------
@@ -91,8 +94,12 @@ def load_modis(
     end_date : str
         Inclusive end date as an ISO string (YYYY-MM-DD).
     provider : str
-        'planetary_computer' (default) or 'earthdata' (NASA directly).
-        Earthdata requires ``evy[earthdata]`` and Earthdata Login credentials.
+        'laads' (default, NASA OPeNDAP subsets), 'planetary_computer', or
+        'earthdata' (NASA full HDF downloads). NASA providers require
+        Earthdata Login credentials; full HDF downloads also need
+        ``evy[earthdata]``. LAADS subsets are
+        fetched lazily and cached under ``EVY_CACHE_DIR/laads``; GDAL must
+        include its NetCDF driver. No provider is substituted on failure.
         HDF files are downloaded to ``EVY_CACHE_DIR/earthdata`` (or the
         platform evy cache), then cropped pixels are read lazily with pyhdf.
 
@@ -129,6 +136,10 @@ def load_modis(
     {'time': 23, 'y': ..., 'x': ...}
     """
     _validate_provider(provider)
+    if provider == "laads":
+        from evy._laads import load_modis_laads
+
+        return load_modis_laads(boundaries, start_date, end_date)
     if provider == "earthdata":
         from evy._earthdata import load_modis_earthdata
 
@@ -314,8 +325,10 @@ def _esri_footprints(bbox):
 
 
 def _validate_provider(provider: str) -> None:
-    if provider not in ("planetary_computer", "earthdata"):
-        raise ValueError("provider must be 'planetary_computer' or 'earthdata'")
+    if provider not in ("planetary_computer", "earthdata", "laads"):
+        raise ValueError(
+            "provider must be 'planetary_computer', 'earthdata', or 'laads'"
+        )
 
 
 def load_evi(
@@ -325,15 +338,16 @@ def load_evi(
     *,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
-    provider: str = "planetary_computer",
+    provider: str = "laads",
 ) -> xr.DataArray:
     """Load scaled, quality-filtered MODIS EVI pixels without aggregation.
 
     Returns lazy ``(time, y, x)`` data at MODIS resolution over the boundary
     bounding box. Optionally mask cropland with WorldCover or annual Esri
     maps. Use :func:`evy.export_geotiff` to save one raster per observation.
-    ``provider`` selects 'planetary_computer' (default) or direct NASA
-    'earthdata'; land cover still comes from Planetary Computer.
+    ``provider`` selects NASA 'laads' OPeNDAP subsets (default),
+    'planetary_computer', or NASA 'earthdata' HDF downloads. Land cover comes from
+    Planetary Computer.
     """
     from evy._process import prepare_evi
 

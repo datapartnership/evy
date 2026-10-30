@@ -4,21 +4,37 @@ This page documents evy's public API — the functions and constants exported fr
 
 Symbols beginning with `_` are internal and not part of the public contract. They are intentionally excluded from this reference.
 
+**Default change:** MODIS now uses `backend="local", provider="laads"` when
+omitted. Sentinel-2 continues to use GEE. To preserve a previous GEE workflow,
+pass `backend="gee"`; to preserve local PC access, pass
+`provider="planetary_computer"`. Backend choices use different crop masks as
+described below, so changing backends can change masked statistics.
+
 ## Backend support
 
 | Backend | Sources | Authentication | Large jobs |
 |---|---|---|---|
 | `"gee"` | MODIS, Sentinel-2 | Google Earth Engine | `export_to_drive=True` |
-| `"local"` | MODIS | None with Planetary Computer; Earthdata Login with `provider="earthdata"` | Split large regions or date ranges |
+| `"local"` | MODIS | None with Planetary Computer; Earthdata Login with `provider="laads"` or `"earthdata"` | Split large regions or date ranges |
 
 The GEE backend uses Dynamic World for cropland masking. The local backend defaults to ESA WorldCover and also supports annual Esri/Impact Observatory maps with `landcover_source="esri"`, so masked results are not expected to match pixel-for-pixel.
 
-For direct NASA MODIS access, install `evy[earthdata]`, configure Earthdata
-credentials, and pass `provider="earthdata"` to `load_modis`, `load_evi`,
-`zonal_stats` (with `backend="local"`), or `cached_zonal_stats`. The default
-provider remains `"planetary_computer"`. Provider selection is included in
-statistics cache keys. See the [NASA access example](../README.md#direct-nasa-earthdata-access)
+For direct NASA MODIS access, configure Earthdata credentials and use the
+default LAADS provider on `load_modis`, `load_evi`, `zonal_stats`, or
+`cached_zonal_stats`. Install `evy[earthdata]` and select `provider="earthdata"`
+for full-HDF downloads instead. Provider selection and resolved backend choices
+are included in statistics cache keys. See the [NASA access example](../README.md#default-modis-access-nasa-laads)
 for authentication, disk cache behavior, and download size considerations.
+The [full-HDF example](../README.md#full-nasa-hdf-downloads-optional) includes a
+complete statistics call using `provider="earthdata"`.
+
+Use `provider="laads"` for lazy NASA LAADS OPeNDAP subsets of EVI and pixel
+reliability on the native MODIS grid. It supports Terra and Aqua, uses at most
+four concurrent transfers, and caches validated subsets under
+`EVY_CACHE_DIR/laads`. A rasterio/GDAL build with the NetCDF driver is required.
+`provider="earthdata"` remains the full-HDF alternative. No provider is silently
+substituted if a request fails. Source-subset caches are separate from the
+statistics cache and are not removed by `clear_zonal_cache`.
 
 ## Output contract
 
@@ -77,7 +93,8 @@ for authentication, disk cache behavior, and download size considerations.
 
 See the [runnable GeoTIFF export recipe](../notebooks/recipes/geotiff-export.ipynb) for EVI, land-cover, and binary crop-mask examples.
 
-Raster output uses the local backend without GEE authentication. No zonal
+Raster output uses the local backend without GEE authentication. The default
+LAADS provider requires NASA credentials; PC remains an explicit option. No zonal
 aggregation is performed by `load_evi` or `export_geotiff`.
 
 ```python

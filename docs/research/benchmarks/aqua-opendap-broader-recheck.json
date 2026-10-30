@@ -1,0 +1,247 @@
+{
+  "checked_at_utc": "2026-10-30T09:47:01.544394+00:00",
+  "note": "Broader authenticated central cloud OPeNDAP sample: MYD13Q1 across years and tiles, other Aqua product controls, and a Terra control. No signed URLs or raw error bodies recorded. Successful data requests are 2x2 subsets.",
+  "cases": [
+    {
+      "product": "MYD13Q1",
+      "year": 2005,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2005169.h28v09.061.2020237040813",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2005,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2005169.h20v09.061.2020237035611",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2002,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2002185.h28v09.061.2020072160615",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2002,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2002185.h20v09.061.2020072160354",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2010,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2010169.h20v09.061.2021168190449",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2010,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2010169.h28v09.061.2021168185956",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2015,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2015169.h20v09.061.2021326221130",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2015,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2015169.h28v09.061.2021326220236",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2020,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2020169.h20v09.061.2020340085417",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2020,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2020169.h28v09.061.2020340085745",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2023,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2023169.h20v09.061.2023192031329",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2023,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2023169.h28v09.061.2023192034757",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2026,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2026169.h20v09.061.2026188073503",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2025,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2025169.h28v09.061.2025189102544",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2025,
+      "area": "rwanda",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2025169.h20v09.061.2025189102643",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13Q1",
+      "year": 2026,
+      "area": "indonesia",
+      "collection_id": "C2307290656-LPCLOUD",
+      "granule": "MYD13Q1.A2026169.h28v09.061.2026188074029",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13A1",
+      "year": 2023,
+      "area": "rwanda",
+      "collection_id": "C2565794046-LPCLOUD",
+      "granule": "MYD13A1.A2023169.h20v09.061.2023192031140",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD13A2",
+      "year": 2023,
+      "area": "rwanda",
+      "collection_id": "C2565794049-LPCLOUD",
+      "granule": "MYD13A2.A2023169.h20v09.061.2023192031109",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD09Q1",
+      "year": 2023,
+      "area": "rwanda",
+      "collection_id": "C2343114343-LPCLOUD",
+      "granule": "MYD09Q1.A2023177.h20v09.061.2023192021558",
+      "advertised_cloud_opendap_links": 0,
+      "dmr_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "product": "MYD11A2",
+      "year": 2023,
+      "area": "rwanda",
+      "collection_id": "C2269057787-LPCLOUD",
+      "granule": "MYD11A2.A2023177.h20v09.061.2023192022017",
+      "advertised_cloud_opendap_links": 1,
+      "dmr_status": 200,
+      "data_status": 200,
+      "data_bytes": 63480,
+      "variables": [
+        "/MODIS_Grid_8Day_1km_LST/Data_Fields/LST_Day_1km"
+      ],
+      "netcdf4_signature": true
+    },
+    {
+      "product": "MOD13Q1",
+      "year": 2023,
+      "area": "rwanda",
+      "collection_id": "C1748066515-LPCLOUD",
+      "granule": "MOD13Q1.A2023177.h20v09.061.2023201051419",
+      "advertised_cloud_opendap_links": 1,
+      "dmr_status": 200,
+      "data_status": 200,
+      "data_bytes": 134221,
+      "variables": [
+        "/MODIS_Grid_16DAY_250m_500m_VI/Data_Fields/_250m_16_days_EVI",
+        "/MODIS_Grid_16DAY_250m_500m_VI/Data_Fields/_250m_16_days_pixel_reliability"
+      ],
+      "netcdf4_signature": true
+    }
+  ],
+  "elapsed_seconds": 29.426320333004696
+}

@@ -1,0 +1,35 @@
+{
+  "records": [
+    {
+      "base": "https://ladsweb.modaps.eosdis.nasa.gov/opendap/RemoteResources/laads/allData/61/MYD13Q1/2023/009/MYD13Q1.A2023009.h20v09.061.2023026194807.hdf",
+      "suffix": ".dmr",
+      "status": 200,
+      "content_type": "application/vnd.opendap.dap4.dataset-metadata+xml",
+      "bytes": 20917,
+      "final_host": "ladsweb.modaps.eosdis.nasa.gov",
+      "contains_dataset": true,
+      "is_html": false
+    },
+    {
+      "base": "https://ladsweb.modaps.eosdis.nasa.gov/opendap/RemoteResources/laads/allData/61/MYD13Q1/2023/009/MYD13Q1.A2023009.h20v09.061.2023026194807.hdf",
+      "suffix": ".dds",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 1076,
+      "final_host": "ladsweb.modaps.eosdis.nasa.gov",
+      "contains_dataset": true,
+      "is_html": false
+    },
+    {
+      "base": "https://ladsweb.modaps.eosdis.nasa.gov/opendap/RemoteResources/laads/allData/61/MYD13Q1/2023/009/MYD13Q1.A2023009.h20v09.061.2023026194807.hdf",
+      "suffix": ".dmr.html",
+      "status": 200,
+      "content_type": "text/html",
+      "bytes": 161996,
+      "final_host": "ladsweb.modaps.eosdis.nasa.gov",
+      "contains_dataset": false,
+      "is_html": false
+    }
+  ],
+  "elapsed_seconds": 16.99475591701048
+}

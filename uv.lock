@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -1211,6 +1211,8 @@ source = { editable = "." }
 dependencies = [
     { name = "altair" },
     { name = "dask" },
+    { name = "earthaccess", version = "0.17.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "earthaccess", version = "0.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "earthengine-api" },
     { name = "exactextract" },
     { name = "geemap" },
@@ -1238,8 +1240,6 @@ docs = [
     { name = "sphinx-autodoc2" },
 ]
 earthdata = [
-    { name = "earthaccess", version = "0.17.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "earthaccess", version = "0.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "pyhdf" },
 ]
 test = [
@@ -1264,7 +1264,7 @@ requires-dist = [
     { name = "altair", specifier = ">=6.0.0" },
     { name = "dask", specifier = ">=2024.1.0" },
     { name = "docutils", marker = "extra == 'docs'", specifier = "==0.17.1" },
-    { name = "earthaccess", marker = "extra == 'earthdata'", specifier = ">=0.17.0,<1" },
+    { name = "earthaccess", specifier = ">=0.17.0,<1" },
     { name = "earthengine-api", specifier = ">=1.0.0" },
     { name = "exactextract", specifier = ">=0.2.0" },
     { name = "geemap", specifier = ">=0.30.0" },

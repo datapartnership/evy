@@ -1,0 +1,67 @@
+{
+  "note": "Small exploratory sample. Missing advertised link is not proof of unavailable access. Tiny successful subsets test both EVI and QA; not a performance benchmark. No raw errors or signed URLs stored.",
+  "cases": [
+    {
+      "case": "rwanda-2023",
+      "product": "MYD13Q1",
+      "granule": "MYD13Q1.A2023009.h20v09.061.2023026194807",
+      "advertised_opendap_links": 0,
+      "dmr_http_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_source_get": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "case": "rwanda-2024",
+      "product": "MYD13Q1",
+      "granule": "MYD13Q1.A2024009.h20v09.061.2024027180018",
+      "advertised_opendap_links": 0,
+      "dmr_http_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_source_get": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "case": "rwanda-2026",
+      "product": "MYD13Q1",
+      "granule": "MYD13Q1.A2026249.h20v09.061.2026265235319",
+      "advertised_opendap_links": 0,
+      "dmr_http_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_source_get": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "case": "us-2023",
+      "product": "MYD13Q1",
+      "granule": "MYD13Q1.A2023009.h10v04.061.2023026194752",
+      "advertised_opendap_links": 0,
+      "dmr_http_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_source_get": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "case": "indonesia-2023",
+      "product": "MYD13Q1",
+      "granule": "MYD13Q1.A2023009.h28v09.061.2023026194336",
+      "advertised_opendap_links": 0,
+      "dmr_http_status": 404,
+      "error_mentions_dmrpp": true,
+      "error_mentions_source_get": true,
+      "error_mentions_missing_key": true
+    },
+    {
+      "case": "terra-control",
+      "product": "MOD13Q1",
+      "granule": "MOD13Q1.A2023001.h20v09.061.2023019191913",
+      "advertised_opendap_links": 1,
+      "dmr_http_status": 200,
+      "valid_dap4_dataset": true,
+      "subset_http_status": 200,
+      "subset_bytes": 134261,
+      "netcdf4_signature": true
+    }
+  ],
+  "elapsed_seconds": 27.66283024999575
+}

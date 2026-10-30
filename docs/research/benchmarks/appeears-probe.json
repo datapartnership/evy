@@ -1,0 +1,206 @@
+{
+  "status": "done",
+  "note": "Subset delivery timing only; excludes Evy processing and parity verification.",
+  "login_http_status": 200,
+  "request": {
+    "task_type": "area",
+    "task_name": "evy-small-area-access-benchmark",
+    "params": {
+      "dates": [
+        {
+          "startDate": "01-01-2023",
+          "endDate": "01-20-2023"
+        }
+      ],
+      "layers": [
+        {
+          "product": "MOD13Q1.061",
+          "layer": "_250m_16_days_EVI"
+        },
+        {
+          "product": "MOD13Q1.061",
+          "layer": "_250m_16_days_pixel_reliability"
+        },
+        {
+          "product": "MYD13Q1.061",
+          "layer": "_250m_16_days_EVI"
+        },
+        {
+          "product": "MYD13Q1.061",
+          "layer": "_250m_16_days_pixel_reliability"
+        }
+      ],
+      "geo": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    29.5,
+                    -1.9
+                  ],
+                  [
+                    29.6,
+                    -1.9
+                  ],
+                  [
+                    29.6,
+                    -1.8
+                  ],
+                  [
+                    29.5,
+                    -1.8
+                  ],
+                  [
+                    29.5,
+                    -1.9
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "output": {
+        "format": {
+          "type": "geotiff"
+        },
+        "projection": "native"
+      }
+    }
+  },
+  "submission_http_status": 202,
+  "task_id": "2149b510-aa5e-46c9-b2fa-25384089bf9d",
+  "submitted_seconds": 33.924837749997096,
+  "elapsed_seconds": 564.4948202079977,
+  "ready_seconds": 459.3113315829978,
+  "files": [
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_EVI_doy2022353000000_aid0001.tif",
+      "file_size": 7637
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_EVI_doy2023001000000_aid0001.tif",
+      "file_size": 7612
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_EVI_doy2023017000000_aid0001.tif",
+      "file_size": 7583
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_VI_Quality_doy2022353000000_aid0001.tif",
+      "file_size": 3267
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_VI_Quality_doy2023001000000_aid0001.tif",
+      "file_size": 2626
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_VI_Quality_doy2023017000000_aid0001.tif",
+      "file_size": 2822
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_pixel_reliability_doy2022353000000_aid0001.tif",
+      "file_size": 3549
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_pixel_reliability_doy2023001000000_aid0001.tif",
+      "file_size": 3391
+    },
+    {
+      "file_name": "MOD13Q1.061_2022351_to_2023020/MOD13Q1.061__250m_16_days_pixel_reliability_doy2023017000000_aid0001.tif",
+      "file_size": 3348
+    },
+    {
+      "file_name": "MYD13Q1.061_2022351_to_2023020/MYD13Q1.061__250m_16_days_EVI_doy2022361000000_aid0001.tif",
+      "file_size": 7761
+    },
+    {
+      "file_name": "MYD13Q1.061_2022351_to_2023020/MYD13Q1.061__250m_16_days_EVI_doy2023009000000_aid0001.tif",
+      "file_size": 7661
+    },
+    {
+      "file_name": "MYD13Q1.061_2022351_to_2023020/MYD13Q1.061__250m_16_days_VI_Quality_doy2022361000000_aid0001.tif",
+      "file_size": 3417
+    },
+    {
+      "file_name": "MYD13Q1.061_2022351_to_2023020/MYD13Q1.061__250m_16_days_VI_Quality_doy2023009000000_aid0001.tif",
+      "file_size": 3156
+    },
+    {
+      "file_name": "MYD13Q1.061_2022351_to_2023020/MYD13Q1.061__250m_16_days_pixel_reliability_doy2022361000000_aid0001.tif",
+      "file_size": 3638
+    },
+    {
+      "file_name": "MYD13Q1.061_2022351_to_2023020/MYD13Q1.061__250m_16_days_pixel_reliability_doy2023009000000_aid0001.tif",
+      "file_size": 3515
+    },
+    {
+      "file_name": "MOD13Q1-061-250m-16-days-VI-Quality-lookup.csv",
+      "file_size": 2152
+    },
+    {
+      "file_name": "MOD13Q1-061-250m-16-days-pixel-reliability-lookup.csv",
+      "file_size": 165
+    },
+    {
+      "file_name": "MYD13Q1-061-250m-16-days-VI-Quality-lookup.csv",
+      "file_size": 3408
+    },
+    {
+      "file_name": "MYD13Q1-061-250m-16-days-pixel-reliability-lookup.csv",
+      "file_size": 165
+    },
+    {
+      "file_name": "MOD13Q1-061-250m-16-days-VI-Quality-Statistics-QA.csv",
+      "file_size": 505
+    },
+    {
+      "file_name": "MOD13Q1-061-250m-16-days-pixel-reliability-Statistics-QA.csv",
+      "file_size": 329
+    },
+    {
+      "file_name": "MYD13Q1-061-250m-16-days-VI-Quality-Statistics-QA.csv",
+      "file_size": 503
+    },
+    {
+      "file_name": "MYD13Q1-061-250m-16-days-pixel-reliability-Statistics-QA.csv",
+      "file_size": 227
+    },
+    {
+      "file_name": "MOD13Q1-061-Statistics.csv",
+      "file_size": 733
+    },
+    {
+      "file_name": "MYD13Q1-061-Statistics.csv",
+      "file_size": 545
+    },
+    {
+      "file_name": "evy-small-area-access-benchmark-granule-list.txt",
+      "file_size": 810
+    },
+    {
+      "file_name": "evy-small-area-access-benchmark-request.json",
+      "file_size": 1189
+    },
+    {
+      "file_name": "evy-small-area-access-benchmark-MOD13Q1-061-metadata.xml",
+      "file_size": 22032
+    },
+    {
+      "file_name": "evy-small-area-access-benchmark-MYD13Q1-061-metadata.xml",
+      "file_size": 22031
+    },
+    {
+      "file_name": "README.md",
+      "file_size": 37959
+    }
+  ],
+  "raster_download_seconds": 100.85937979099981,
+  "raster_bytes": 70983
+}

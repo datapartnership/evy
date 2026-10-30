@@ -18,7 +18,9 @@ def test_load_modis_raises_on_empty_stac_result(mock_open, small_boundaries):
     mock_open.return_value = fake_catalog
 
     with pytest.raises(EmptyStacResultError) as excinfo:
-        load_modis(small_boundaries, "2023-01-01", "2023-01-31")
+        load_modis(
+            small_boundaries, "2023-01-01", "2023-01-31", provider="planetary_computer"
+        )
 
     message = str(excinfo.value)
     assert "modis-13Q1-061" in message
@@ -59,7 +61,9 @@ def test_load_modis_passes_items_to_odc(
     fake_ds.sel.return_value = fake_ds
     mock_odc_load.return_value = fake_ds
 
-    result = load_modis(small_boundaries, "2023-01-01", "2023-01-31")
+    result = load_modis(
+        small_boundaries, "2023-01-01", "2023-01-31", provider="planetary_computer"
+    )
 
     assert result is fake_ds
     # Items were materialized to a list (not an iterator) when passed downstream.
@@ -93,7 +97,9 @@ def test_load_modis_retries_on_network_error(mock_open, small_boundaries):
     ]
 
     with pytest.raises(EmptyStacResultError):
-        load_modis(small_boundaries, "2023-01-01", "2023-01-31")
+        load_modis(
+            small_boundaries, "2023-01-01", "2023-01-31", provider="planetary_computer"
+        )
 
     # Three open attempts confirm retry behavior.
     assert mock_open.call_count == 3
@@ -107,5 +113,7 @@ def test_stac_search_does_not_retry_client_errors(mock_open, small_boundaries):
     mock_open.side_effect = not_found
 
     with pytest.raises(APIError):
-        load_modis(small_boundaries, "2023-01-01", "2023-01-31")
+        load_modis(
+            small_boundaries, "2023-01-01", "2023-01-31", provider="planetary_computer"
+        )
     assert mock_open.call_count == 1

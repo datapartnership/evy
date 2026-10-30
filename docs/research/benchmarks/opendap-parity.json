@@ -1,0 +1,10 @@
+{
+  "observations_compared": 2,
+  "shared_grid_shape": {
+    "time": 2,
+    "x": 49,
+    "y": 48
+  },
+  "evi_raw_exact_match": true,
+  "qa_exact_match": true
+}

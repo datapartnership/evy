@@ -1,0 +1,11 @@
+{
+  "granule": "MOD13Q1.A2023001.h20v09.061.2023019191913.hdf",
+  "comparison_source": "DAP4 subset without AppEEARS AOI clipping",
+  "shape": {
+    "time": 1,
+    "y": 49,
+    "x": 49
+  },
+  "evi_raw_exact_match": true,
+  "qa_exact_match": true
+}

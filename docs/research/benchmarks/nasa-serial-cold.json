@@ -1,0 +1,19 @@
+{
+  "status": "aborted_stalled",
+  "provider": "earthdata",
+  "download_threads": 1,
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "start": "2023-01-01",
+  "end": "2023-01-20",
+  "mask_cropland": false,
+  "completed_granules": 1,
+  "expected_granules": 3,
+  "completed_bytes": 221645171,
+  "elapsed_lower_bound_seconds": 798.0561909675598,
+  "note": "Lower bound starts at source-cache creation, after auth/search. Run canceled after only one tile completed. The completed staged HDF was validated and preserved. Not a completed end-to-end timing or a speedup baseline. Some small probes and a briefly started, canceled parallel run overlapped this attempt."
+}

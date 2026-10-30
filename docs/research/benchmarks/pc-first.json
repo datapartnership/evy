@@ -1,0 +1,50 @@
+{
+  "label": "pc-first",
+  "provider": "planetary_computer",
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "start": "2023-01-01",
+  "end": "2023-01-20",
+  "mask_cropland": false,
+  "freq": "ME",
+  "stats": [
+    "mean",
+    "count"
+  ],
+  "download_threads": null,
+  "cache_files_before": 0,
+  "cache_bytes_before": 0,
+  "python": "3.11.12",
+  "versions": {
+    "evy": "0.0.0.post63.dev0+cdbb8e7",
+    "xarray": "2025.12.0",
+    "dask": "2026.1.2",
+    "rasterio": "1.4.4"
+  },
+  "note": "No final-result cache used. PC network bytes and OS/remote caches are not measured. Peak RSS includes imports and intermediate arrays.",
+  "discovery_acquisition_setup_seconds": 9.62750770799903,
+  "materialize_seconds": 19.958797958002833,
+  "shape": {
+    "y": 48,
+    "x": 49,
+    "time": 3
+  },
+  "observations": [
+    "2023-01-01T00:00:00.000000000",
+    "2023-01-09T00:00:00.000000000",
+    "2023-01-17T00:00:00.000000000"
+  ],
+  "landcover_seconds": 3.4580007195472717e-06,
+  "aggregate_and_extract_seconds": 0.043573542003287,
+  "total_seconds": 29.630607041995972,
+  "status": "ok",
+  "elapsed_seconds": 29.63402183300059,
+  "cache_files_after": 0,
+  "cache_bytes_after": 0,
+  "new_cached_bytes": 0,
+  "process_peak_rss_mib": 360.203125
+}

@@ -1,0 +1,14 @@
+{
+  "MOD13Q1": {
+    "granules_sampled": 3,
+    "advertised_opendap_links": 3,
+    "sample_granule": "MOD13Q1.A2022353.h20v09.061.2023006045317",
+    "dds_http_status": 400,
+    "dds_is_dataset": false
+  },
+  "MYD13Q1": {
+    "granules_sampled": 2,
+    "advertised_opendap_links": 0
+  },
+  "elapsed_seconds": 61.675404874993546
+}

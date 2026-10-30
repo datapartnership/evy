@@ -7,7 +7,49 @@ import rioxarray  # noqa: F401 — activates .rio accessor
 import xarray as xr
 
 from evy import compute_zonal_stats, zonal_stats
-from evy.zonal import _gee_date_batches, _to_output_contract
+from evy.zonal import _gee_date_batches, _to_output_contract, _resolve_backend_provider
+
+
+@pytest.mark.parametrize(
+    "backend, source, provider, expected",
+    [
+        (None, "modis", None, ("local", "laads")),
+        (None, "sentinel2", None, ("gee", "planetary_computer")),
+        ("gee", "modis", None, ("gee", "planetary_computer")),
+        (None, "modis", "planetary_computer", ("local", "planetary_computer")),
+        ("local", "modis", "earthdata", ("local", "earthdata")),
+    ],
+)
+def test_backend_provider_resolution(backend, source, provider, expected):
+    assert _resolve_backend_provider(backend, source, provider) == expected
+
+
+def test_default_modis_dispatch_and_explicit_pc(small_boundaries):
+    from unittest.mock import patch
+
+    with (
+        patch("evy._zonal_local._zonal_stats_local") as local,
+        patch("evy.zonal._ensure_initialized") as gee,
+    ):
+        zonal_stats(small_boundaries, zone_col="shapeName")
+        assert local.call_args.kwargs["provider"] == "laads"
+        zonal_stats(
+            small_boundaries, zone_col="shapeName", provider="planetary_computer"
+        )
+        assert local.call_args.kwargs["provider"] == "planetary_computer"
+        gee.assert_not_called()
+
+
+@pytest.mark.parametrize("kwargs", [{"backend": "gee"}, {"source": "sentinel2"}])
+def test_gee_selections_still_dispatch_to_gee(small_boundaries, kwargs):
+    from unittest.mock import patch
+
+    with patch(
+        "evy.zonal._ensure_initialized", side_effect=RuntimeError("GEE selected")
+    ) as gee:
+        with pytest.raises(RuntimeError, match="GEE selected"):
+            zonal_stats(small_boundaries, zone_col="shapeName", **kwargs)
+        gee.assert_called_once()
 
 
 def _synthetic_modis(evi_values):
@@ -72,7 +114,8 @@ def test_gee_output_contract_renames_and_drops_extras():
         ({"backend": "Local"}, ValueError),
         ({"scael": 100}, TypeError),
         ({"backend": "local", "scale": 100}, ValueError),
-        ({"provider": "earthdata"}, ValueError),
+        ({"backend": "gee", "provider": "earthdata"}, ValueError),
+        ({"backend": "gee", "provider": "laads"}, ValueError),
         ({"backend": "local", "provider": "unknown"}, ValueError),
     ],
 )
@@ -145,7 +188,12 @@ def test_zonal_forwards_landcover_source(small_boundaries):
         )
     assert local.call_args.kwargs["landcover_source"] == "esri"
     with pytest.raises(ValueError, match="requires backend='local'"):
-        zonal_stats(small_boundaries, zone_col="shapeName", landcover_source="esri")
+        zonal_stats(
+            small_boundaries,
+            zone_col="shapeName",
+            backend="gee",
+            landcover_source="esri",
+        )
 
 
 def test_local_masks_each_observation_before_aggregation(small_boundaries):
