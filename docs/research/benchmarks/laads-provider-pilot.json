@@ -1,0 +1,53 @@
+{
+  "label": "laads-provider-pilot",
+  "provider": "laads",
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "country": null,
+  "zones": 1,
+  "start": "2023-01-01",
+  "end": "2023-01-20",
+  "mask_cropland": false,
+  "freq": "ME",
+  "stats": [
+    "mean",
+    "count"
+  ],
+  "download_threads": null,
+  "cache_files_before": 0,
+  "cache_bytes_before": 0,
+  "python": "3.11.12",
+  "versions": {
+    "evy": "0.0.0.post63.dev0+cdbb8e7",
+    "xarray": "2025.12.0",
+    "dask": "2026.1.2",
+    "rasterio": "1.4.4"
+  },
+  "note": "No final-result cache used. PC network bytes and OS/remote caches are not measured. Peak RSS includes imports and intermediate arrays. Source-cache counters corrected after this run to include LAADS .nc4 subsets.",
+  "discovery_acquisition_setup_seconds": 23.12010183300299,
+  "materialize_seconds": 6.368454999988899,
+  "shape": {
+    "time": 3,
+    "y": 49,
+    "x": 49
+  },
+  "observations": [
+    "2023-01-01T00:00:00.000000000",
+    "2023-01-09T00:00:00.000000000",
+    "2023-01-17T00:00:00.000000000"
+  ],
+  "landcover_seconds": 1.7583006410859525e-05,
+  "aggregate_and_extract_seconds": 0.024881624995032325,
+  "total_seconds": 29.51374691700039,
+  "statistics_match_reference": true,
+  "status": "ok",
+  "elapsed_seconds": 29.521213625004748,
+  "cache_files_after": 3,
+  "cache_bytes_after": 65491,
+  "new_cached_bytes": 65491,
+  "process_peak_rss_mib": 359.0
+}

@@ -1,0 +1,94 @@
+{
+  "checked_at_utc": "2026-10-30T09:48:31.427798+00:00",
+  "note": "Actual DAP4 EVI+QA data tests for the October8 Aqua granules absent from PC. Tiny central-tile windows, not AOI statistics or performance benchmarks.",
+  "cases": [
+    {
+      "area": "rwanda",
+      "granule": "MYD13Q1.A2026281.h20v09.061.2026300161933",
+      "route": "LAADS OPeNDAP",
+      "dmr_status": 200,
+      "data_status": 200,
+      "data_bytes": 18126,
+      "netcdf4_signature": true,
+      "bands": {
+        "//_250m_16_days_EVI": {
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            [
+              5675,
+              6703
+            ],
+            [
+              5116,
+              5661
+            ]
+          ]
+        },
+        "//_250m_16_days_pixel_reliability": {
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            [
+              3,
+              3
+            ],
+            [
+              3,
+              3
+            ]
+          ]
+        }
+      },
+      "elapsed_seconds": 13.65176291699754
+    },
+    {
+      "area": "indonesia",
+      "granule": "MYD13Q1.A2026281.h28v09.061.2026300164059",
+      "route": "LAADS OPeNDAP",
+      "dmr_status": 200,
+      "data_status": 200,
+      "data_bytes": 18126,
+      "netcdf4_signature": true,
+      "bands": {
+        "//_250m_16_days_EVI": {
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            [
+              3627,
+              3627
+            ],
+            [
+              3423,
+              3423
+            ]
+          ]
+        },
+        "//_250m_16_days_pixel_reliability": {
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              1
+            ]
+          ]
+        }
+      },
+      "elapsed_seconds": 5.295258665995789
+    }
+  ]
+}

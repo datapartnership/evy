@@ -1,0 +1,48 @@
+{
+  "label": "nasa-single-warm",
+  "provider": "earthdata",
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "start": "2023-01-01",
+  "end": "2023-01-01",
+  "mask_cropland": false,
+  "freq": "ME",
+  "stats": [
+    "mean",
+    "count"
+  ],
+  "download_threads": 4,
+  "cache_files_before": 1,
+  "cache_bytes_before": 221645171,
+  "python": "3.11.12",
+  "versions": {
+    "evy": "0.0.0.post63.dev0+cdbb8e7",
+    "xarray": "2025.12.0",
+    "dask": "2026.1.2",
+    "rasterio": "1.4.4"
+  },
+  "note": "No final-result cache used. PC network bytes and OS/remote caches are not measured. Peak RSS includes imports and intermediate arrays.",
+  "discovery_acquisition_setup_seconds": 57.194844084006036,
+  "materialize_seconds": 0.05840129100397462,
+  "shape": {
+    "time": 1,
+    "y": 49,
+    "x": 49
+  },
+  "observations": [
+    "2023-01-01T00:00:00.000000000"
+  ],
+  "landcover_seconds": 1.3339958968572319e-06,
+  "aggregate_and_extract_seconds": 0.012085750000551343,
+  "total_seconds": 57.26545029200497,
+  "status": "ok",
+  "elapsed_seconds": 57.26683262500592,
+  "cache_files_after": 1,
+  "cache_bytes_after": 221645171,
+  "new_cached_bytes": 0,
+  "process_peak_rss_mib": 356.421875
+}

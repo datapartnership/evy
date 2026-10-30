@@ -248,11 +248,32 @@ def test_cache_separates_landcover_sources(tmp_path, small_boundaries, fake_zona
 
 def test_cache_separates_modis_providers(tmp_path, small_boundaries, fake_zonal_df):
     with patch("evy.zonal.zonal_stats", return_value=fake_zonal_df) as zs:
-        for provider in ("planetary_computer", "earthdata", "earthdata"):
+        for provider in ("planetary_computer", "earthdata", "laads", "laads"):
             cached_zonal_stats(
-                small_boundaries, zone_col="shapeName", backend="local",
-                provider=provider, start_date="2023-01-01", end_date="2023-01-31",
+                small_boundaries,
+                zone_col="shapeName",
+                backend="local",
+                provider=provider,
+                start_date="2023-01-01",
+                end_date="2023-01-31",
                 cache_dir=tmp_path,
             )
-    assert zs.call_count == 2
-    assert zs.call_args.kwargs["provider"] == "earthdata"
+    assert zs.call_count == 3
+    assert zs.call_args.kwargs["provider"] == "laads"
+
+
+def test_default_and_explicit_laads_share_resolved_cache_key(
+    tmp_path, small_boundaries, fake_zonal_df
+):
+    with patch("evy.zonal.zonal_stats", return_value=fake_zonal_df) as zs:
+        cached_zonal_stats(small_boundaries, zone_col="shapeName", cache_dir=tmp_path)
+        assert zs.call_args.kwargs["backend"] == "local"
+        assert zs.call_args.kwargs["provider"] == "laads"
+        cached_zonal_stats(
+            small_boundaries,
+            zone_col="shapeName",
+            backend="local",
+            provider="laads",
+            cache_dir=tmp_path,
+        )
+    assert zs.call_count == 1

@@ -1,0 +1,156 @@
+{
+  "checked_at_utc": "2026-10-30T09:34:05.193381+00:00",
+  "note": "Public catalogue metadata comparison, v061, July-October 2026; dates parsed from granule IDs to avoid null STAC datetime values. Does not test asset download accessibility. Both providers filtered to composite starts inside the interval. Item counts include search overlaps/revisions. Null STAC datetime with start_datetime/end_datetime is valid interval metadata.",
+  "areas": [
+    {
+      "area": "rwanda",
+      "bbox": [
+        29.5,
+        -1.9,
+        29.6,
+        -1.8
+      ],
+      "products": [
+        {
+          "product": "MOD13Q1",
+          "pc_dates": [
+            "2026-07-12",
+            "2026-07-28",
+            "2026-08-13",
+            "2026-08-29",
+            "2026-09-14",
+            "2026-09-30"
+          ],
+          "pc_null_datetime_count": 7,
+          "pc_sample_ids": [
+            "MOD13Q1.A2026273.h20v09.061.2026290001249",
+            "MOD13Q1.A2026257.h20v09.061.2026277222241"
+          ],
+          "nasa_dates": [
+            "2026-07-12",
+            "2026-07-28",
+            "2026-08-13",
+            "2026-08-29",
+            "2026-09-14",
+            "2026-09-30"
+          ],
+          "missing_pc_dates": [],
+          "extra_pc_dates": [],
+          "pc_search_items_returned": 7,
+          "nasa_search_items_returned": 7
+        },
+        {
+          "product": "MYD13Q1",
+          "pc_dates": [
+            "2026-07-04",
+            "2026-07-20",
+            "2026-08-05",
+            "2026-08-21",
+            "2026-09-06",
+            "2026-09-22"
+          ],
+          "pc_null_datetime_count": 8,
+          "pc_sample_ids": [
+            "MYD13Q1.A2026265.h20v09.061.2026286105307",
+            "MYD13Q1.A2026249.h20v09.061.2026265235319"
+          ],
+          "nasa_dates": [
+            "2026-07-04",
+            "2026-07-20",
+            "2026-08-05",
+            "2026-08-21",
+            "2026-09-06",
+            "2026-09-22",
+            "2026-10-08"
+          ],
+          "missing_pc_dates": [
+            "2026-10-08"
+          ],
+          "extra_pc_dates": [],
+          "pc_search_items_returned": 8,
+          "nasa_search_items_returned": 8,
+          "missing_granule_ids_from_nasa": [
+            "MYD13Q1.A2026281.h20v09.061.2026300161933"
+          ],
+          "pc_exact_id_matches_without_spatial_or_date_filters": []
+        }
+      ],
+      "pc_next_page": false
+    },
+    {
+      "area": "indonesia",
+      "bbox": [
+        110,
+        -7,
+        110.1,
+        -6.9
+      ],
+      "products": [
+        {
+          "product": "MOD13Q1",
+          "pc_dates": [
+            "2026-07-12",
+            "2026-07-28",
+            "2026-08-13",
+            "2026-08-29",
+            "2026-09-14",
+            "2026-09-30"
+          ],
+          "pc_null_datetime_count": 7,
+          "pc_sample_ids": [
+            "MOD13Q1.A2026273.h28v09.061.2026289235236",
+            "MOD13Q1.A2026257.h28v09.061.2026277222226"
+          ],
+          "nasa_dates": [
+            "2026-07-12",
+            "2026-07-28",
+            "2026-08-13",
+            "2026-08-29",
+            "2026-09-14",
+            "2026-09-30"
+          ],
+          "missing_pc_dates": [],
+          "extra_pc_dates": [],
+          "pc_search_items_returned": 7,
+          "nasa_search_items_returned": 7
+        },
+        {
+          "product": "MYD13Q1",
+          "pc_dates": [
+            "2026-07-04",
+            "2026-07-20",
+            "2026-08-05",
+            "2026-08-21",
+            "2026-09-06",
+            "2026-09-22"
+          ],
+          "pc_null_datetime_count": 8,
+          "pc_sample_ids": [
+            "MYD13Q1.A2026265.h28v09.061.2026286105306",
+            "MYD13Q1.A2026249.h28v09.061.2026265235556"
+          ],
+          "nasa_dates": [
+            "2026-07-04",
+            "2026-07-20",
+            "2026-08-05",
+            "2026-08-21",
+            "2026-09-06",
+            "2026-09-22",
+            "2026-10-08"
+          ],
+          "missing_pc_dates": [
+            "2026-10-08"
+          ],
+          "extra_pc_dates": [],
+          "pc_search_items_returned": 8,
+          "nasa_search_items_returned": 8,
+          "missing_granule_ids_from_nasa": [
+            "MYD13Q1.A2026281.h28v09.061.2026300164059"
+          ],
+          "pc_exact_id_matches_without_spatial_or_date_filters": []
+        }
+      ],
+      "pc_next_page": false
+    }
+  ]
+}

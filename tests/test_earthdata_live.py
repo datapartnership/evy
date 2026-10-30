@@ -33,7 +33,9 @@ def test_live_nasa_pixels_stats_and_export(tmp_path, monkeypatch):
     nasa = evy.load_modis(
         boundary, "2023-01-01", "2023-01-20", provider="earthdata"
     ).compute()
-    pc = evy.load_modis(boundary, "2023-01-01", "2023-01-20").compute()
+    pc = evy.load_modis(
+        boundary, "2023-01-01", "2023-01-20", provider="planetary_computer"
+    ).compute()
     np.testing.assert_array_equal(
         nasa.time, pd.to_datetime(["2023-01-01", "2023-01-09", "2023-01-17"])
     )

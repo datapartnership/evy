@@ -20,9 +20,10 @@ evy supports two computation backends. You only need to set up the backend you p
 
 | Backend | Authentication | Best for |
 |---|---|---|
-| **Google Earth Engine (default)** | Google account + Earth Engine access | Large regions, many years, server-side compute |
+| **Google Earth Engine (default for Sentinel-2)** | Google account + Earth Engine access | Server-side processing; explicit `backend="gee"` for MODIS |
 | **Local (Planetary Computer)** | None | Small regions, full control over runtime, no account setup |
 | **Local (NASA earthaccess)** | NASA Earthdata account | Access to granules not on Planetary Computer |
+| **Local (NASA LAADS, default for MODIS)** | NASA Earthdata account | EVI and QA subsets, including recent Terra/Aqua data |
 
 ### Google Earth Engine
 
@@ -36,11 +37,17 @@ evy supports two computation backends. You only need to set up the backend you p
 
 3. Alternatively, set the `GEE_PROJECT` environment variable to your project ID before running Python. This skips the interactive prompt.
 
-### Planetary Computer (default local backend)
+### Planetary Computer (optional local provider)
 
-No authentication required. evy uses the public STAC endpoint automatically.
+No NASA authentication is required. Select `provider="planetary_computer"` to
+use its public STAC endpoint. This is useful for existing local workflows and
+the no-account examples; recently published observations may be absent.
 
-### NASA earthaccess (optional local backend)
+### NASA Earthdata Login (default MODIS provider)
+
+The default `provider="laads"` uses these credentials. `earthaccess` is included
+with evy; use a rasterio/GDAL build with the NetCDF driver for LAADS. Full-HDF
+`provider="earthdata"` additionally needs `evy[earthdata]` for pyhdf.
 
 1. Create a free NASA Earthdata account at [urs.earthdata.nasa.gov](https://urs.earthdata.nasa.gov).
 2. Persist your credentials once:

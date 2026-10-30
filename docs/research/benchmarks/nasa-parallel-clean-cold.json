@@ -1,0 +1,19 @@
+{
+  "status": "aborted_time_limit",
+  "provider": "earthdata",
+  "download_threads": 4,
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "start": "2023-01-01",
+  "end": "2023-01-20",
+  "mask_cropland": false,
+  "expected_granules": 3,
+  "completed_granules": 0,
+  "received_bytes_including_partial_files": 274726912,
+  "elapsed_lower_bound_seconds": 360.18745279312134,
+  "note": "New empty source cache. Stopped after more than five minutes of source acquisition; no completed end-to-end result and no serial/parallel speedup claim. Partial files from this canceled run were removed after recording their sizes."
+}

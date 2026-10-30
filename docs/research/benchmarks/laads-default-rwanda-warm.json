@@ -1,0 +1,13 @@
+{
+  "default_backend": "local",
+  "default_provider": "laads",
+  "country": "RWA",
+  "year": 2023,
+  "mask_cropland": true,
+  "observations": 46,
+  "zones": 5,
+  "rows": 60,
+  "elapsed_seconds_including_boundaries": 42.09151133299747,
+  "matches_cold_country_run": true,
+  "note": "Public zonal_stats called without backend/provider; reuses 92 validated subset files and normal bounded local processing."
+}

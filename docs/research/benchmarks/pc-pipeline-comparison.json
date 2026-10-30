@@ -1,0 +1,31 @@
+{
+  "checked_at_utc": "2026-10-30T09:58:34.266963+00:00",
+  "provider": "pc",
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "start": "2023-01-01",
+  "end": "2023-01-20",
+  "mask_cropland": false,
+  "note": "Exploratory small-area comparison; no source-subset or final-result cache used. Prototype uses known MOD13Q1 native sinusoidal grid, concurrent public CMR discovery, and up to four LAADS subset requests. OS/server cache state uncontrolled. Imports excluded for both.",
+  "acquisition_seconds": 5.083034082999802,
+  "processing_seconds": 0.049148916004924104,
+  "total_seconds": 5.132186874994659,
+  "statistics_match_reference": true,
+  "shape": {
+    "y": 48,
+    "x": 49,
+    "time": 3
+  },
+  "statistics": [
+    {
+      "date": "2023-01-01",
+      "zone": "probe",
+      "mean": 0.38502270601212124,
+      "count": 2302.7982036017347
+    }
+  ]
+}

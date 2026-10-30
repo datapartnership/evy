@@ -199,7 +199,7 @@ def _zonal_stats_local(
     include_geometry: bool = False,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
-    provider: str = "planetary_computer",
+    provider: str = "laads",
 ) -> "pd.DataFrame | gpd.GeoDataFrame":
     """Internal orchestrator for local-backend zonal statistics.
 
@@ -226,7 +226,7 @@ def _zonal_stats_local(
     landcover_source : str
         "worldcover" (static, default) or "esri" (annual 2017–2025).
     provider : str
-        "planetary_computer" (default) or "earthdata".
+        "laads" (default), "planetary_computer", or "earthdata".
 
     Returns
     -------

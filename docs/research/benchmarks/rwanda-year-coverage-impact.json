@@ -1,0 +1,11 @@
+{
+  "different_statistic_values": 19,
+  "total_statistic_values": 120,
+  "months_with_differences": [
+    "2023-02",
+    "2023-10"
+  ],
+  "max_absolute_mean_difference": 0.0265047944763227,
+  "max_absolute_count_difference": 2250.0000002243396,
+  "note": "Full NASA 46-observation output versus PC 44-observation output. Not a common-cohort numerical comparison."
+}

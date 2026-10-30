@@ -1,0 +1,33 @@
+{
+  "granule": "MYD13Q1.A2023009.h20v09.061.2023026194807",
+  "route": "LAADS OPeNDAP",
+  "http_status": 200,
+  "request_seconds": 4.806433625009959,
+  "bytes": 21963,
+  "netcdf4_signature": true,
+  "requested_window": [
+    864,
+    912,
+    4552,
+    4600
+  ],
+  "parity_against_appeears": {
+    "evi_raw": {
+      "shape": [
+        49,
+        49
+      ],
+      "compared_cells": 2353,
+      "exact_match": true
+    },
+    "qa": {
+      "shape": [
+        49,
+        49
+      ],
+      "compared_cells": 2353,
+      "exact_match": true
+    }
+  },
+  "total_seconds_including_auth": 8.8470242919866
+}

@@ -1,0 +1,52 @@
+{
+  "note": "Experimental DAP4 subset delivery; no pipeline timing yet.",
+  "granules": [
+    {
+      "granule": "MOD13Q1.A2023001.h20v09.061.2023019191913",
+      "dmr_status": 200,
+      "subset_status": 200,
+      "subset_seconds": 12.602350624998508,
+      "bytes": 137910,
+      "window": [
+        864,
+        912,
+        4552,
+        4600
+      ],
+      "origin": [
+        2223901.039333,
+        0.0
+      ],
+      "resolution": [
+        231.65635826395834,
+        231.65635826395834
+      ]
+    },
+    {
+      "granule": "MOD13Q1.A2023017.h20v09.061.2023034172554",
+      "dmr_status": 200,
+      "subset_status": 200,
+      "subset_seconds": 7.378015667003638,
+      "bytes": 137896,
+      "window": [
+        864,
+        912,
+        4552,
+        4600
+      ],
+      "origin": [
+        2223901.039333,
+        0.0
+      ],
+      "resolution": [
+        231.65635826395834,
+        231.65635826395834
+      ]
+    },
+    {
+      "granule": "MYD13Q1.A2023009.h20v09.061.2023026194807",
+      "dmr_status": 404
+    }
+  ],
+  "elapsed_seconds": 53.02584020799986
+}

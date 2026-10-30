@@ -99,7 +99,7 @@ def cached_zonal_stats(
     boundaries: gpd.GeoDataFrame,
     *,
     zone_col: str,
-    backend: Literal["gee", "local"] = "gee",
+    backend: Literal["gee", "local"] | None = None,
     source: Literal["modis", "sentinel2"] = "modis",
     start_date: str | None = None,
     end_date: str | None = None,
@@ -108,7 +108,7 @@ def cached_zonal_stats(
     include_geometry: bool = False,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
-    provider: str = "planetary_computer",
+    provider: str | None = None,
     cache_key: str | None = None,
     cache_dir: Union[str, Path, None] = None,
     recompute: bool = False,
@@ -158,12 +158,9 @@ def cached_zonal_stats(
     ...                              start_date='2023-01-01', end_date='2023-12-31')
     # First call: ~minutes. Second call: cache hit, ~milliseconds.
     """
-    from evy.zonal import _default_dates, zonal_stats
-    from evy.load import _validate_provider
+    from evy.zonal import _default_dates, _resolve_backend_provider, zonal_stats
 
-    _validate_provider(provider)
-    if backend == "gee" and provider != "planetary_computer":
-        raise ValueError("provider='earthdata' requires backend='local'")
+    backend, provider = _resolve_backend_provider(backend, source, provider)
 
     if cache_dir is None:
         cache_dir = _resolve_cache_dir()
@@ -185,7 +182,11 @@ def cached_zonal_stats(
         mask_cropland=mask_cropland,
         include_geometry=include_geometry,
         user_key=cache_key,
-        extra={"scale": scale, "landcover_source": landcover_source, "provider": provider},
+        extra={
+            "scale": scale,
+            "landcover_source": landcover_source,
+            "provider": provider,
+        },
     )
     cache_file = cache_dir / f"{key}.parquet"
 

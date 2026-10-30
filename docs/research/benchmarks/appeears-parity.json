@@ -1,0 +1,37 @@
+{
+  "observations_compared": 3,
+  "shared_grid_shape": {
+    "time": 3,
+    "x": 49,
+    "y": 48
+  },
+  "files": [
+    {
+      "file": "MOD13Q1.061__250m_16_days_EVI_doy2023001000000_aid0001.tif",
+      "raw_integer_evi": true,
+      "scale_applied_by_evy": 0.0001
+    },
+    {
+      "file": "MOD13Q1.061__250m_16_days_EVI_doy2023017000000_aid0001.tif",
+      "raw_integer_evi": true,
+      "scale_applied_by_evy": 0.0001
+    },
+    {
+      "file": "MYD13Q1.061__250m_16_days_EVI_doy2023009000000_aid0001.tif",
+      "raw_integer_evi": true,
+      "scale_applied_by_evy": 0.0001
+    }
+  ],
+  "evi_raw_exact_match": true,
+  "qa_exact_match": true,
+  "native_grid_monthly_statistics_match": true,
+  "native_statistics": [
+    {
+      "date": "2023-01-01",
+      "zone": "probe",
+      "mean": 0.38502270594922694,
+      "count": 2302.798203680122
+    }
+  ],
+  "parity_check_seconds_including_pc_download": 13.024093540996546
+}

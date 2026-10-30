@@ -1,0 +1,52 @@
+{
+  "checked_at_utc": "2026-10-30T10:00:11.243943+00:00",
+  "provider": "laads",
+  "bbox": [
+    29.5,
+    -1.9,
+    29.6,
+    -1.8
+  ],
+  "start": "2023-01-01",
+  "end": "2023-01-20",
+  "mask_cropland": false,
+  "note": "Exploratory small-area comparison; no source-subset or final-result cache used. Prototype uses known MOD13Q1 native sinusoidal grid, concurrent public CMR discovery, and up to four LAADS subset requests. OS/server cache state uncontrolled. Imports excluded for both.",
+  "authentication_seconds": 9.799914540999453,
+  "discovery_seconds": 4.42578412500734,
+  "subset_and_decode_seconds": 5.9956581669976,
+  "requests": [
+    {
+      "granule": "MOD13Q1.A2023001.h20v09.061.2023019191913",
+      "bytes": 21784,
+      "request_and_decode_seconds": 4.788904083005036
+    },
+    {
+      "granule": "MOD13Q1.A2023017.h20v09.061.2023034172554",
+      "bytes": 21744,
+      "request_and_decode_seconds": 4.177264333004132
+    },
+    {
+      "granule": "MYD13Q1.A2023009.h20v09.061.2023026194807",
+      "bytes": 21963,
+      "request_and_decode_seconds": 5.992314375005662
+    }
+  ],
+  "transferred_bytes": 65491,
+  "acquisition_seconds": 20.24652950000018,
+  "processing_seconds": 0.028196750005008653,
+  "total_seconds": 20.2747275409929,
+  "statistics_match_reference": true,
+  "shape": {
+    "time": 3,
+    "y": 49,
+    "x": 49
+  },
+  "statistics": [
+    {
+      "date": "2023-01-01",
+      "zone": "probe",
+      "mean": 0.38502270605079036,
+      "count": 2302.7982074991005
+    }
+  ]
+}

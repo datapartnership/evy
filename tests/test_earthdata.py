@@ -59,8 +59,10 @@ def nasa(tmp_path, monkeypatch):
         return path
 
     def download(results, local_path, threads):
-        name = Path(results[0].data_links()[0]).name
-        return [Path(shutil.copy(source / name, Path(local_path) / name))]
+        return [
+            Path(shutil.copy(source / Path(result.data_links()[0]).name, local_path))
+            for result in results
+        ]
 
     monkeypatch.delenv("EARTHDATA_TOKEN", raising=False)
     monkeypatch.delenv("EARTHDATA_USERNAME", raising=False)
@@ -104,7 +106,9 @@ def test_hdf_pixels_dates_scaling_quality_and_cache(nasa):
     ).compute()
     np.testing.assert_allclose(evi[:, 1, 1], [0.5, 0.3])
     assert np.isnan(evi[:, 0, :3]).all()
-    assert fetch.call_count == 2  # repeated call uses only complete cached HDFs
+    assert fetch.call_count == 1  # repeated call uses only complete cached HDFs
+    assert len(fetch.call_args.args[0]) == 2
+    assert fetch.call_args.kwargs["threads"] == 4
     assert {call.kwargs["short_name"] for call in search.call_args_list} == {
         "MOD13Q1",
         "MYD13Q1",
@@ -154,6 +158,70 @@ def test_failed_download_does_not_publish_cache(nasa, tmp_path):
     with pytest.raises(RuntimeError, match="download incomplete"):
         evy.load_modis(region(), "2023-01-01", "2023-01-01", provider="earthdata")
     assert not list((tmp_path / "evy_cache" / "earthdata").iterdir())
+
+
+def test_partial_batch_is_not_published_and_can_retry(nasa, tmp_path):
+    add, _, _, fetch = nasa
+    add()
+    add(day=17)
+    download = fetch.side_effect
+    fetch.side_effect = lambda results, **kwargs: download(results[:1], **kwargs)
+    with pytest.raises(RuntimeError, match="download incomplete"):
+        evy.load_modis(region(), "2023-01-01", "2023-01-17", provider="earthdata")
+    assert not list((tmp_path / "evy_cache" / "earthdata").iterdir())
+    fetch.side_effect = download
+    ds = evy.load_modis(region(), "2023-01-01", "2023-01-17", provider="earthdata")
+    assert ds.sizes["time"] == 2
+
+
+def test_corrupt_download_is_not_published(nasa, tmp_path):
+    from pyhdf.error import HDF4Error
+
+    add, _, _, fetch = nasa
+    add()
+    download = fetch.side_effect
+
+    def corrupt(results, **kwargs):
+        files = download(results, **kwargs)
+        files[0].write_bytes(b"not an HDF file")
+        return files
+
+    fetch.side_effect = corrupt
+    with pytest.raises(HDF4Error):
+        evy.load_modis(region(), "2023-01-01", "2023-01-01", provider="earthdata")
+    assert not list((tmp_path / "evy_cache" / "earthdata").iterdir())
+
+
+def test_extended_range_downloads_only_missing_files_in_any_return_order(nasa):
+    add, _, _, fetch = nasa
+    add()
+    evy.load_modis(region(), "2023-01-01", "2023-01-01", provider="earthdata")
+    add(day=17, value=3000)
+    add(day=33, value=2000)
+    download = fetch.side_effect
+    fetch.side_effect = lambda *args, **kwargs: download(*args, **kwargs)[::-1]
+    ds = evy.load_modis(region(), "2023-01-01", "2023-02-02", provider="earthdata")
+    assert fetch.call_count == 2
+    assert len(fetch.call_args.args[0]) == 2
+    np.testing.assert_allclose(ds.evi_raw[:, 1, 1].compute(), [5000, 3000, 2000])
+
+
+def test_later_batch_failure_preserves_completed_batches(nasa, tmp_path):
+    add, _, _, fetch = nasa
+    for day in (1, 17, 33, 49, 65):
+        add(day=day)
+    download = fetch.side_effect
+    fetch.side_effect = lambda results, **kwargs: (
+        download(results, **kwargs) if len(results) == 4 else []
+    )
+    with pytest.raises(RuntimeError, match="download incomplete"):
+        evy.load_modis(region(), "2023-01-01", "2023-03-06", provider="earthdata")
+    cache = tmp_path / "evy_cache" / "earthdata"
+    assert len(list(cache.glob("*.hdf"))) == 4
+    fetch.side_effect = download
+    ds = evy.load_modis(region(), "2023-01-01", "2023-03-06", provider="earthdata")
+    assert len(fetch.call_args.args[0]) == 1
+    assert ds.sizes["time"] == 5
 
 
 def test_auth_and_validation_before_download(nasa):

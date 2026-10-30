@@ -66,11 +66,25 @@ def _validate_args(backend, source, freq, stats, gee_only: list[str]) -> list[st
     return stats
 
 
+def _resolve_backend_provider(backend, source, provider):
+    """Resolve MODIS to local LAADS and Sentinel-2 to GEE unless explicitly selected."""
+    from evy.load import _validate_provider
+
+    if backend is None:
+        backend = "local" if source == "modis" else "gee"
+    if provider is None:
+        provider = "laads" if backend == "local" else "planetary_computer"
+    _validate_provider(provider)
+    if backend == "gee" and provider != "planetary_computer":
+        raise ValueError(f"provider={provider!r} requires backend='local'")
+    return backend, provider
+
+
 def zonal_stats(
     boundaries: gpd.GeoDataFrame,
     *,
     zone_col: str,
-    backend: Literal["gee", "local"] = "gee",
+    backend: Literal["gee", "local"] | None = None,
     source: Literal["modis", "sentinel2"] = "modis",
     start_date: str | None = None,
     end_date: str | None = None,
@@ -79,7 +93,7 @@ def zonal_stats(
     include_geometry: bool = False,
     mask_cropland: bool = True,
     landcover_source: str = "worldcover",
-    provider: str = "planetary_computer",
+    provider: str | None = None,
     scale: int | None = None,
     export_to_drive: bool = False,
     drive_folder: str | None = None,
@@ -99,7 +113,8 @@ def zonal_stats(
         column is passed through to the output unchanged. For GeoBoundaries
         data the conventional value is ``"shapeName"``.
     backend:
-        Computation backend:
+        Computation backend. If omitted, MODIS uses local LAADS and
+        Sentinel-2 uses GEE. Explicit selections are honored:
         - 'gee': Google Earth Engine (server-side, requires authentication)
         - 'local': Local computation via Planetary Computer (no auth) or NASA Earthdata
     source:
@@ -138,8 +153,10 @@ def zonal_stats(
         Local only: 'worldcover' (default, static class 40) or 'esri'
         (annual 2017–2025 maps, class 5). GEE always uses Dynamic World.
     provider:
-        Local MODIS provider: 'planetary_computer' (default) or 'earthdata'.
-        Earthdata requires ``evy[earthdata]`` and Earthdata Login credentials.
+        Local MODIS provider: 'laads' (default, NASA OPeNDAP subsets),
+        'planetary_computer', or 'earthdata' (full HDF downloads). NASA
+        providers require Earthdata Login. Full HDF downloads additionally
+        require ``evy[earthdata]``. Explicit GEE calls need no provider argument.
         Land cover still comes from Planetary Computer.
     scale:
         GEE only. Resolution in meters. Default depends on source:
@@ -179,11 +196,7 @@ def zonal_stats(
             f"Available columns: {list(boundaries.columns)}"
         )
 
-    from evy.load import _validate_provider
-
-    _validate_provider(provider)
-    if backend == "gee" and provider != "planetary_computer":
-        raise ValueError("provider='earthdata' requires backend='local'")
+    backend, provider = _resolve_backend_provider(backend, source, provider)
     if landcover_source not in ("worldcover", "esri"):
         raise ValueError("landcover_source must be 'worldcover' or 'esri'")
     if backend == "gee" and landcover_source != "worldcover":
