@@ -1,53 +1,60 @@
-name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
+name: Validate and publish Python distribution
 
 on:
   push:
     tags:
-      - '*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    name: Build distribution 📦
+    name: Validate release artifacts
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
-    - name: Install pypa/build
-      run: >-
-        python3 -m
-        pip install
-        build
-        --user
-    - name: Build a binary wheel and a source tarball
-      run: python3 -m build
-    - name: Store the distribution packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Dynamic versioning needs the release tag and history.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install uv
+        run: python -m pip install uv==0.13.6
+      - name: Install locked development dependencies
+        run: uv sync --locked
+      - name: Check source and formatting
+        run: |
+          uv run --locked ruff check src tests scripts
+          uv run --locked ruff format --check src tests scripts
+      - name: Run offline tests
+        run: uv run --locked pytest -m "not live" tests/
+      - name: Build wheel from source archive and validate metadata
+        run: |
+          uv run --locked python -m build --installer uv
+          uv run --locked python -m twine check --strict dist/*
+      - name: Verify release version and clean installations
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: uv run --locked python scripts/check_distribution.py dist --tag "$RELEASE_TAG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
 
   publish-to-pypi:
-    name: >-
-      Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
-    needs:
-    - build
+    name: Publish to PyPI
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/wb-template  # Replace <package-name> with your PyPI project name
+      url: https://pypi.org/p/evy
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
-
+      id-token: write
     steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

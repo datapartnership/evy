@@ -41,9 +41,10 @@ pip install git+https://github.com/datapartnership/evy.git
 - [Troubleshooting](docs/troubleshooting.md)
 
 To build and serve the docs locally, run `just docs` (requires `just`, `uv`,
-`make`, and Python 3). Use `just docs 8080` for another port. Stop with Ctrl+C;
-rerun the command after editing the docs to rebuild them. The build uses Python
-3.11 through `uv`, matching the documentation CI environment.
+and Python 3). Use `just docs 8080` for another port. Stop with Ctrl+C;
+rerun the command after editing the docs to rebuild them. Local development uses
+Python 3.11 through `uv`. See the [contributor guide](docs/CONTRIBUTING.md) for
+`just setup`, `just check`, and the release process.
 
 ## Citation
 
